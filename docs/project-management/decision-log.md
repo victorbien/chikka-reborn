@@ -41,6 +41,12 @@ These decisions are blocking or will block phase starts. Each has a `Due By` dat
 | OD-004 | Push notification service | Supabase Realtime, Web Push API, third-party | Phase 2 | Phase 1 end | Engineering |
 | OD-005 | Classic Mode design assets | Original-inspired originals, licensed assets | Phase 5 | Phase 4 end | Design |
 | OD-007 | Philippine SMS sender ID approach | Pre-registered short code vs alphanumeric | Phase 6 PH live | Begin Phase 1 | Operations |
+| OD-009 | Credit handling in simulation mode: docs say simulated SMS consume no credits, but also block sends on insufficient credits and test that behaviour in staging (AC-2-006, E2E-007) | (a) simulation skips balance checks and shows a "would cost" preview; (b) a separate simulated balance; (c) simulation deducts test credits | Phase 2 credit design | Phase 1 end | Product/Engineering |
+| OD-010 | Profile bootstrap: no trigger creates a `profiles` row when a Supabase Auth user is created; `username` is required and unique | DB trigger on `auth.users` vs backend creates profile on register; username generation rule | Phase 1 DB | Immediately | Engineering |
+| OD-011 | Inbound SMS routing: matching on `(from_phone, to_number)` is ambiguous if one platform number serves many users who text the same phone | Per-user or per-conversation numbers, reply codes, or a restriction of one active conversation per phone per number. Provider and cost implications need verification | Phase 2 inbound design | Phase 1 end | Engineering/Operations |
+| OD-012 | `profiles` RLS lets any authenticated user read every active profile row (including `phone_number`) when queried with the anon key; privacy filtering is only in the application layer | Restrict direct SELECT to own row and serve public fields via a view or backend endpoint | Phase 1 DB | Immediately | Engineering |
+| OD-013 | Message deletion model: "delete for me" cannot be represented by a single `messages.deleted_at` | Per-user hidden-message table vs per-participant deletion marker | Phase 2 | Phase 1 end | Engineering |
+| OD-014 | Session token storage: Supabase JS stores sessions in `localStorage` by default, conflicting with the no-localStorage policy | Custom storage adapter vs accepting default with stricter CSP | Phase 1 auth | Immediately | Engineering |
 
 ---
 
@@ -101,6 +107,34 @@ These decisions are blocking or will block phase starts. Each has a `Due By` dat
 **Status:** ✅ Decided  
 **Decision:** SQLAlchemy 2.x async engine and sessions. No synchronous DB calls in async handlers.  
 **Full ADR:** `docs/architecture/architecture-decisions.md` ADL-007
+
+---
+
+### DEC-ARCH-008 to DEC-ARCH-015 — Target Architecture (Proposed)
+**Date:** November 2026  
+**Status:** 🟡 Proposed — awaiting review  
+**Decision:** Eight proposed decisions. Details in `docs/architecture/architecture-decisions.md`.
+
+| ID | Decision | ADR | Effect on earlier decisions |
+|---|---|---|---|
+| DEC-ARCH-008 | Modular monolith with enforced module boundaries | ADL-010 | Refines DEC-ARCH-001, DEC-ARCH-005 |
+| DEC-ARCH-009 | Supabase DB/Auth; backend is the authorisation authority; RLS is defence in depth; cookie-based refresh | ADL-011 | Refines DEC-ARCH-006; proposes resolving OD-012, OD-014 |
+| DEC-ARCH-010 | FastAPI async backend with module routers, `web` and `worker` processes | ADL-012 | Refines DEC-ARCH-005, DEC-ARCH-007 |
+| DEC-ARCH-011 | Backend WebSocket gateway with Postgres NOTIFY fan-out | ADL-013 | Would supersede DEC-ARCH-002 |
+| DEC-ARCH-012 | SMS provider abstraction, policy pipeline, explicit modes | ADL-014 | Refines DEC-ARCH-003, DEC-PROD-001 |
+| DEC-ARCH-013 | AI provider abstraction with staged, non-sending pipeline | ADL-015 | Refines DEC-ARCH-003, DEC-ARCH-004, DEC-PROD-002 |
+| DEC-ARCH-014 | Postgres job queue and outbox for delivery and retry | ADL-016 | Resolves ADL-009 |
+| DEC-ARCH-015 | Container deployment, two process types, gated production | ADL-017 | Partly informs OD-003, OD-008 |
+
+---
+
+### DEC-ARCH-016 — Database Design (Proposed)
+**Date:** November 2026  
+**Status:** 🟡 Proposed — awaiting review  
+**Decision:** 29-table schema with message/delivery separation, column-level client grants, database-enforced status and ledger invariants, tombstoned profiles, versioned country capabilities and separate live/demo credit ledgers. Adds `@electric-sql/pglite` 0.5.16 as a development-only dependency for running migrations and SQL tests without Docker.  
+**Proposed resolutions of open decisions:** OD-010 (profile created by trigger on `auth.users`), OD-012 (profiles own-row only; `public_profiles` view for others), OD-013 (`message_hides` table plus `deleted_for_everyone_at`). OD-009 follows the FRS demo ledger. OD-006, OD-007 and OD-008 remain open.  
+**Full ADR:** `docs/architecture/architecture-decisions.md` ADL-018  
+**Details:** `docs/database/database-schema.md`, `docs/database/requirements-traceability.md`
 
 ---
 

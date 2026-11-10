@@ -2,258 +2,212 @@
 
 **Document:** CHKR-DB-002  
 **Project:** Chikka Reborn  
-**Version:** 1.0  
-**Status:** Draft  
+**Version:** 2.0  
+**Status:** Proposed (matches `supabase/migrations/`)  
 **Last Revised:** November 2026  
 
 ---
 
 ## Purpose
 
-Describes all entity relationships in the Chikka Reborn database — cardinality, constraints, and the business rules encoded in those relationships.
+Shows how the 29 tables relate. Columns are limited to keys and the fields that shape a relationship. Full column lists are in [schema-reference.md](schema-reference.md).
 
-## Scope
-
-All 13 tables. Complements the DDL in `docs/database/database-schema.md`.
-
----
-
-## 1. Full Entity Relationship Diagram
+## 1. Full Diagram
 
 ```mermaid
 erDiagram
-    profiles {
-        uuid id PK
-        text username UK
-        text display_name
-        text phone_number UK
-        text role
-        text ui_mode
-        bool is_active
-        timestamptz deleted_at
-        timestamptz created_at
-    }
+    AUTH_USERS ||--|| PROFILES : "has (restrict)"
 
-    contacts {
+    PROFILES ||--o{ PHONE_NUMBERS : owns
+    PROFILES ||--o{ USER_CONSENTS : "records"
+    PROFILES ||--o{ CONTACTS : "owns"
+    PROFILES ||--o{ CONTACTS : "is contact of"
+    PROFILES ||--o{ CONTACT_REQUESTS : "sends"
+    PROFILES ||--o{ CONTACT_REQUESTS : "receives"
+    PROFILES ||--o{ CONTACT_GROUPS : owns
+    CONTACT_GROUPS ||--o{ CONTACT_GROUP_MEMBERS : contains
+    CONTACTS ||--o{ CONTACT_GROUP_MEMBERS : "belongs to"
+    PROFILES ||--o{ USER_BLOCKS : "blocks"
+    PROFILES ||--o{ ABUSE_REPORTS : "files"
+    PROFILES ||--o{ ABUSE_REPORTS : "is reported in"
+
+    CONVERSATIONS ||--o{ CONVERSATION_MEMBERS : has
+    PROFILES ||--o{ CONVERSATION_MEMBERS : "joins"
+    CONVERSATIONS ||--o{ MESSAGES : contains
+    PROFILES ||--o{ MESSAGES : "sends"
+    MESSAGES ||--o{ MESSAGE_HIDES : "hidden by"
+    PROFILES ||--o{ MESSAGE_HIDES : hides
+    MESSAGES ||--o{ MESSAGE_SEGMENTS : "split into"
+    MESSAGES ||--o{ MESSAGE_DELIVERIES : "attempted as"
+    MESSAGE_DELIVERIES ||--o| MESSAGE_DELIVERIES : "retry of"
+    MESSAGE_DELIVERIES ||--o{ MESSAGE_DELIVERY_EVENTS : "history"
+    MESSAGE_DELIVERIES ||--o{ MESSAGE_SEGMENTS : "reports parts"
+    PROVIDER_CONFIGURATIONS ||--o{ MESSAGE_DELIVERIES : "used by"
+    PROVIDER_CONFIGURATIONS ||--o{ PROVIDER_WEBHOOKS : "received for"
+    PROVIDER_WEBHOOKS ||--o{ MESSAGE_DELIVERY_EVENTS : "produces"
+    PROVIDER_WEBHOOKS }o--o| MESSAGE_DELIVERIES : "matches"
+    PROVIDER_WEBHOOKS }o--o| MESSAGES : "creates"
+    PROVIDER_WEBHOOKS ||--o{ SMS_OPT_OUTS : "triggers"
+    SMS_COUNTRY_CAPABILITIES ||--o{ MESSAGES : "rate version"
+    SMS_COUNTRY_CAPABILITIES ||--o{ CREDIT_TRANSACTIONS : "rate version"
+    CONVERSATIONS ||--o{ SMS_ROUTES : "routed by"
+    PROFILES ||--o{ SMS_ROUTES : "holds"
+
+    PROFILES ||--o{ MESSAGING_CREDITS : "has live and demo"
+    MESSAGING_CREDITS ||--o{ CREDIT_TRANSACTIONS : "ledger"
+    MESSAGES ||--o{ CREDIT_TRANSACTIONS : "charged by"
+
+    PROFILES ||--|| NOTIFICATION_PREFERENCES : configures
+    PROFILES ||--o{ NOTIFICATIONS : receives
+
+    PROFILES ||--o{ AI_ASSISTANCE_LOGS : requests
+    CONVERSATIONS ||--o{ AI_ASSISTANCE_LOGS : "context of"
+    AI_ASSISTANCE_LOGS ||--o{ MESSAGES : "assisted"
+    PROFILES ||--o{ AUDIT_LOGS : "acts in"
+
+    PROFILES {
+        uuid id PK
+        text username "unique, case-insensitive"
+        text role "user or admin"
+        text status "pending_verification active suspended deleted"
+        text profile_visibility
+    }
+    PHONE_NUMBERS {
+        uuid id PK
+        uuid user_id FK
+        e164 e164
+        text verification_mode "live or simulated"
+        text status "pending verified released"
+    }
+    CONTACTS {
         uuid id PK
         uuid owner_id FK
-        contact_type contact_type
-        uuid chikka_user_id FK
-        text phone_number
-        text display_name
-        contact_status status
+        text contact_type "chikka or sms"
+        uuid contact_user_id FK "chikka only"
+        e164 phone_e164 "sms only"
     }
-
-    conversations {
+    CONTACT_REQUESTS {
         uuid id PK
-        conversation_type type
-        timestamptz last_message_at
+        uuid from_user_id FK
+        uuid to_user_id FK
+        text status
     }
-
-    conversation_participants {
+    CONVERSATIONS {
+        uuid id PK
+        text conversation_type "chikka or sms"
+        text direct_key "unique pair key"
+        bigint last_seq
+    }
+    CONVERSATION_MEMBERS {
+        uuid conversation_id PK
+        uuid user_id PK
+        bigint last_read_seq
+        bigint cleared_before_seq
+    }
+    MESSAGES {
         uuid id PK
         uuid conversation_id FK
-        uuid user_id FK
-        text phone_number
-        timestamptz last_read_at
+        bigint seq "unique per conversation"
+        text channel "chikka or sms"
+        text direction "outbound or inbound"
+        uuid sender_user_id FK "null when inbound"
+        uuid idempotency_key "unique per sender"
+        text status "projection of latest attempt"
+        uuid capability_id FK
     }
-
-    messages {
+    MESSAGE_DELIVERIES {
         uuid id PK
-        uuid conversation_id FK
-        uuid sender_user_id FK
-        text sender_phone
-        message_origin origin
-        text body
-        message_status status
-        bool is_ai_assisted
-        timestamptz deleted_at
+        uuid message_id FK
+        smallint attempt_number "unique per message"
+        uuid retry_of_delivery_id FK
+        uuid provider_configuration_id FK
+        text status "platform vocabulary"
+        text provider_status "raw"
+        text provider_message_id "unique per provider"
+        text failure_class
+        int status_version
     }
-
-    notifications {
+    MESSAGE_DELIVERY_EVENTS {
         uuid id PK
-        uuid user_id FK
-        notification_type type
-        bool is_read
+        uuid delivery_id FK
+        text dedupe_key "unique per delivery"
+        boolean applied
     }
-
-    outbound_sms {
+    PROVIDER_WEBHOOKS {
         uuid id PK
-        uuid sender_user_id FK
-        text recipient_phone
-        text body
-        sms_status status
-        bool is_simulated
-        text idempotency_key UK
-        uuid conversation_id FK
-        int retry_count
-    }
-
-    sms_delivery_events {
-        uuid id PK
-        uuid outbound_sms_id FK
-        text provider_message_id
-        sms_status mapped_status
+        text provider
+        text kind "status or inbound"
+        text dedupe_key "unique per provider and kind"
         jsonb raw_payload
     }
-
-    inbound_sms {
-        uuid id PK
-        text provider_message_id UK
-        text from_phone
-        text body
-        uuid conversation_id FK
-        uuid matched_user_id FK
-        bool is_matched
+    MESSAGING_CREDITS {
+        uuid user_id PK
+        text ledger_type PK "live or demo"
+        bigint balance_units
+        bigint reserved_units
     }
-
-    credit_accounts {
+    CREDIT_TRANSACTIONS {
         uuid id PK
-        uuid user_id FK
-        numeric balance
-        numeric reserved
+        text entry_type
+        bigint balance_delta
+        bigint reserved_delta
+        uuid message_id FK
     }
-
-    credit_transactions {
+    SMS_COUNTRY_CAPABILITIES {
         uuid id PK
-        uuid credit_account_id FK
-        uuid user_id FK
-        credit_transaction_type type
-        numeric amount
-        numeric balance_after
+        char country_code
+        int version
+        boolean is_current
     }
-
-    country_capabilities {
+    PROVIDER_CONFIGURATIONS {
         uuid id PK
-        char country_code UK
-        bool outbound_enabled
-        bool inbound_enabled
-        numeric credit_cost_per_segment
+        text provider
+        text mode "simulation or live"
+        boolean is_active "only one"
     }
-
-    ai_usage_logs {
+    AUDIT_LOGS {
         uuid id PK
-        uuid user_id FK
-        text feature
-        text model_id
-        int input_tokens
-        int output_tokens
-        bool success
+        text category
+        text action
+        timestamptz retain_until
     }
-
-    profiles ||--o{ contacts : "owner_id — owns"
-    profiles ||--o{ contacts : "chikka_user_id — is target of"
-    profiles ||--o{ conversation_participants : "user_id — participates in"
-    profiles ||--o{ messages : "sender_user_id — sends"
-    profiles ||--o{ outbound_sms : "sender_user_id — sends"
-    profiles ||--|| credit_accounts : "user_id — has exactly one"
-    profiles ||--o{ credit_transactions : "user_id — records"
-    profiles ||--o{ notifications : "user_id — receives"
-    profiles ||--o{ ai_usage_logs : "user_id — generates"
-
-    conversations ||--o{ conversation_participants : "conversation_id"
-    conversations ||--o{ messages : "conversation_id — contains"
-    conversations ||--o{ outbound_sms : "conversation_id — linked"
-    conversations ||--o{ inbound_sms : "conversation_id — linked"
-
-    outbound_sms ||--o{ sms_delivery_events : "outbound_sms_id — events"
-    credit_accounts ||--o{ credit_transactions : "credit_account_id — ledger"
 ```
 
----
+`SYSTEM_SETTINGS` and `RATE_LIMIT_COUNTERS` have no relationships and are omitted from the diagram. `auth.users` is the Supabase Auth table.
 
-## 2. Relationship Descriptions
+## 2. Relationship Notes
 
-### profiles → contacts (owner)
-**Cardinality:** One profile owns zero or many contacts.  
-**Rule:** `contacts.owner_id = profiles.id`. Cascade delete: when a profile is deleted, their contact list is deleted.
+| Relationship | Notes |
+|---|---|
+| `auth.users` to `profiles` | One to one, created by trigger. `ON DELETE RESTRICT`, so a profile (and everything that references it) cannot disappear because an auth user was deleted. |
+| `contacts` | A mutual Chikka contact is two rows, one per owner. A composite unique `(id, owner_id)` lets group membership use composite foreign keys that force the group and the contact to share an owner. |
+| `conversations` to `conversation_members` | Two members for `chikka`, one for `sms`. The external number of an `sms` conversation is `conversations.remote_phone`. |
+| `messages` to `message_deliveries` | One to many. `(message_id, attempt_number)` is unique. Retries link to the failed attempt through `retry_of_delivery_id`. |
+| `message_deliveries` to `provider_configurations` | Required for SMS, absent for chat. The database checks that `is_simulated` matches the configuration's mode. |
+| `provider_webhooks` | Loose links (`ON DELETE SET NULL`) to the delivery and message it produced. A webhook can exist before its delivery is known (an orphan) and is matched later. |
+| `credit_transactions` to `messages` | `ON DELETE RESTRICT`. A message with ledger entries cannot be hard-deleted, so the ledger stays explainable. |
+| `messages` to `ai_assistance_logs` | Optional, `SET NULL`. Never exposed to the recipient. |
+| `abuse_reports` | Message and conversation links are `SET NULL`; the evidence lives in `snapshot`. |
+| `audit_logs` | Actor link is `RESTRICT` (profiles are tombstoned, not deleted). Targets are stored as text, not foreign keys, so audit rows never block deletion of what they describe. |
 
-### profiles → contacts (target)
-**Cardinality:** One profile may appear as the target (`chikka_user_id`) in zero or many other users' contact lists.  
-**Rule:** `contacts.chikka_user_id = profiles.id`. Set null on delete: if a user deletes their account, they are removed as the contact target but the contact record persists (shows as "Deleted User").
+## 3. Nullable Fields and Their Meaning
 
-### profiles → conversation_participants
-**Cardinality:** One profile participates in zero or many conversations.  
-**Rule:** A conversation participant is either a registered user (`user_id IS NOT NULL`) or an SMS-only phone number (`phone_number IS NOT NULL`). Never both. This constraint is enforced by a CHECK constraint.
+| Field | Null means |
+|---|---|
+| `profiles.username` | Onboarding has not finished |
+| `messages.sender_user_id` | Inbound SMS (sender is an external number) |
+| `messages.body` | Deleted for everyone |
+| `messages.capability_id` | Chat message, or inbound SMS |
+| `message_deliveries.provider_configuration_id` | Chat delivery (no provider) |
+| `message_deliveries.recipient_user_id` | Outbound SMS (recipient is a number) |
+| `message_deliveries.next_attempt_at` | Not scheduled (in flight or finished) |
+| `sms_opt_outs.platform_number` | Opt-out applies to every sender number |
+| `conversation_members.left_at` | Still a member |
+| `abuse_reports.message_id` | Report on a user or number, or the message was later removed |
 
-### conversations → conversation_participants
-**Cardinality:** One conversation has two or more participants.  
-**Rule:** Phase 1 enforces exactly two participants per conversation. The application layer enforces this; the DB allows more for future group support.
-
-### conversations → messages
-**Cardinality:** One conversation has zero or many messages.  
-**Rule:** Messages belong to exactly one conversation. Cascade delete: deleting a conversation deletes all its messages.
-
-### messages (deleted)
-**Rule:** When a message is deleted, `body` is set to `NULL` and `deleted_at` is set. The row is not removed — this preserves thread continuity and allows the "This message was deleted" placeholder. The CHECK constraint requires `body IS NOT NULL` only when `deleted_at IS NULL`.
-
-### outbound_sms → sms_delivery_events
-**Cardinality:** One outbound SMS has zero or many delivery events.  
-**Rule:** Delivery events are immutable — they are never updated, only appended. The unique constraint `(provider_message_id, provider_status)` prevents duplicate event processing.
-
-### profiles → credit_accounts
-**Cardinality:** Exactly one credit account per profile.  
-**Rule:** Created automatically by a trigger when a new profile is inserted. UNIQUE constraint on `user_id`. Balance and reserved are non-negative by CHECK constraint — the application layer uses `SELECT FOR UPDATE` to prevent concurrent over-deduction.
-
-### credit_accounts → credit_transactions
-**Cardinality:** One account has zero or many transactions.  
-**Rule:** Transactions are immutable — they are never updated or deleted. They form an append-only ledger. `balance_after` records the account balance at the time of the transaction, enabling audit and reconstruction.
-
-### inbound_sms → conversations (optional)
-**Cardinality:** An inbound SMS is optionally linked to one conversation.  
-**Rule:** Matching logic: find a conversation where one participant's `phone_number` matches `inbound_sms.from_phone` and another participant's virtual number matches `inbound_sms.to_number`. If matched, `is_matched = TRUE` and `conversation_id` is set. If not matched, `is_matched = FALSE` and `conversation_id` is NULL — logged for admin review.
-
-### country_capabilities (standalone)
-**Cardinality:** Zero or many capabilities records; one per country code.  
-**Rule:** Not linked to any user data. Admin-managed reference data. Read by the SMS service to determine capability before allowing a send.
-
----
-
-## 3. Constraints Summary
-
-| Table | Constraint | Type | Description |
-|---|---|---|---|
-| `profiles` | `username_length` | CHECK | 3–30 characters |
-| `profiles` | `username_format` | CHECK | Lowercase alphanumeric + underscore only |
-| `profiles` | `valid_role` | CHECK | `user` or `admin` only |
-| `profiles` | `valid_ui_mode` | CHECK | `modern` or `classic` only |
-| `contacts` | `contacts_chikka_xor_sms` | CHECK | Either Chikka user OR phone, never both |
-| `contacts` | `contacts_no_self` | CHECK | Cannot add yourself as a contact |
-| `contacts` | `contacts_unique_chikka` | UNIQUE | One contact entry per Chikka user pair |
-| `contacts` | `contacts_unique_sms` | UNIQUE | One SMS contact entry per phone number per owner |
-| `conversation_participants` | `participants_user_xor_phone` | CHECK | Either user_id OR phone_number, never both |
-| `messages` | `message_has_sender` | CHECK | Must have sender_user_id or sender_phone |
-| `messages` | `message_body_required` | CHECK | Body only NULL when deleted_at is set |
-| `outbound_sms` | `idempotency_key` | UNIQUE | Prevents duplicate sends |
-| `outbound_sms` | `valid_provider` | CHECK | `mock` or `twilio` only |
-| `sms_delivery_events` | `delivery_event_idempotent` | UNIQUE | `(provider_message_id, provider_status)` |
-| `inbound_sms` | `provider_message_id` | UNIQUE | Prevents duplicate inbound processing |
-| `credit_accounts` | `credit_balance_non_negative` | CHECK | Balance ≥ 0 always |
-| `credit_accounts` | `credit_reserved_non_negative` | CHECK | Reserved ≥ 0 always |
-| `ai_usage_logs` | `valid_ai_feature` | CHECK | Known feature names only |
-
----
-
-## 4. Nullable Fields and Their Meaning
-
-| Table | Field | Nullable? | Meaning when NULL |
-|---|---|---|---|
-| `profiles` | `phone_number` | Yes | No phone number associated |
-| `profiles` | `deleted_at` | Yes | Account is active |
-| `messages` | `sender_user_id` | Yes | Message originated from an SMS-only sender |
-| `messages` | `sender_phone` | Yes | Message originated from a registered user |
-| `messages` | `body` | Yes | Message has been deleted |
-| `messages` | `deleted_at` | Yes | Message is not deleted |
-| `outbound_sms` | `provider_message_id` | Yes | Not yet sent to provider |
-| `outbound_sms` | `conversation_id` | Yes | Standalone SMS, not part of a conversation thread |
-| `inbound_sms` | `conversation_id` | Yes | Inbound SMS could not be matched to a conversation |
-| `inbound_sms` | `matched_user_id` | Yes | Inbound SMS could not be matched to a user |
-| `ai_usage_logs` | `error_code` | Yes | AI call succeeded |
-
----
-
-## 5. Revision History
+## 4. Revision History
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 1.0 | November 2026 | Kiro (Principal Architect) | Initial draft |
+| 1.0 | November 2026 | Kiro (Principal Architect) | Initial 13-table diagram |
+| 2.0 | November 2026 | Kiro (Principal Architect) | 29-table diagram; message/delivery separation |

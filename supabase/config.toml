@@ -1,0 +1,15 @@
+# Minimal Supabase CLI configuration for local development.
+# Run `supabase init` in an empty folder to see every available option; the CLI fills in defaults
+# for anything omitted here. Only settings this project depends on are set.
+
+project_id = "chikka-reborn"
+
+[db]
+port = 54322
+# Match the major version of the hosted project (check it in the Supabase dashboard).
+major_version = 15
+
+[db.seed]
+enabled = true
+# Development users and sample data. Never point a staging or production project at this.
+sql_paths = ["./seed/*.sql"]

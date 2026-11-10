@@ -31,9 +31,9 @@ gantt
     section Phase 2 — SMS Integration
     SMS Send/Receive, Credits, Admin :p2, after p1, 10w
     section Phase 3 — AI Features
-    Bedrock Integration, AI Features :p3, after p1, 8w
+    Bedrock Integration, AI Features :p3, after p2, 8w
     section Phase 4 — Credits & Admin
-    Payments, Full Admin        :p4, after p2, 6w
+    Payments, Full Admin        :p4, after p3, 6w
     section Phase 5 — Classic Mode
     Nostalgic UI, a11y, i18n    :p5, after p4, 6w
     section Phase 6 — Production

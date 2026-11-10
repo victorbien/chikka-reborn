@@ -53,12 +53,12 @@ graph TB
     AI_SVC --> ABSTRACT
     ABSTRACT --> BEDROCK
     BEDROCK --> BROCK_API
-    BROCK_API -->> BEDROCK
-    BEDROCK -->> AI_SVC
+    BROCK_API --> BEDROCK
+    BEDROCK --> AI_SVC
     AI_SVC --> LOG_SVC
     LOG_SVC --> AI_LOGS
-    AI_SVC -->> AI_ROUTE
-    AI_ROUTE -->> REVIEW
+    AI_SVC --> AI_ROUTE
+    AI_ROUTE --> REVIEW
     REVIEW --> ACCEPT
     ACCEPT -->|user approves| COMPOSE
     COMPOSE -->|user explicitly sends| MSG_ROUTE[POST /messages or /sms/send]

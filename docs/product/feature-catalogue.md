@@ -62,7 +62,7 @@ All features across all modules and phases. This is the single authoritative lis
 | FEAT-CONT-005 | Online presence indicator | MVP | 1 | FR-CONTACTS-003 | FEAT-CONT-004 |
 | FEAT-CONT-006 | SMS contact visual distinction | MVP | 2 | FR-CONTACTS-003 | FEAT-CONT-003 |
 | FEAT-CONT-007 | Block contact | MVP | 1 | FR-CONTACTS-004 | FEAT-CONT-002 |
-| FEAT-CONT-008 | Mute contact | MVP | 1 | FR-CONTACTS-004 | FEAT-CONT-002 |
+| FEAT-CONT-008 | Mute contact | MVP | 1 | FR-CONTACTS-006 | FEAT-CONT-002 |
 | FEAT-CONT-009 | Remove contact | MVP | 1 | FR-CONTACTS-003 | FEAT-CONT-002 |
 | FEAT-CONT-010 | Contact groups / labels | POST-MVP | 2 | FR-CONTACTS-005 | FEAT-CONT-002 |
 | FEAT-CONT-011 | Contact list pagination | MVP | 1 | FR-CONTACTS-003 | FEAT-CONT-004 |
@@ -209,18 +209,20 @@ All features across all modules and phases. This is the single authoritative lis
 
 | Module | MVP Features | POST-MVP Features | FUTURE Features | Total |
 |---|---|---|---|---|
-| AUTH | 11 | 1 | 0 | 12 |
-| CONTACTS | 9 | 1 | 0 | 10 (in list = 11) |
+| AUTH | 12 | 0 | 0 | 12 |
+| CONTACTS | 10 | 1 | 0 | 11 |
 | MSG | 9 | 2 | 0 | 11 |
-| SMS | 10 | 2 | 0 | 13 (incl. retry/idempotency) |
-| SMSRECV | 4 | 2 | 0 | 6 |
-| AI | 1 | 12 | 0 | 13 |
+| SMS | 12 | 1 | 0 | 13 |
+| SMSRECV | 5 | 1 | 0 | 6 |
+| AI | 0 | 13 | 0 | 13 |
 | NOTIF | 3 | 3 | 0 | 6 |
 | CREDIT | 6 | 2 | 0 | 8 |
 | PRIVACY | 2 | 2 | 0 | 4 |
 | ADMIN | 0 | 8 | 0 | 8 |
 | CLASSIC | 1 | 3 | 0 | 4 |
-| **Total** | **56** | **38** | **0** | **94** |
+| **Total** | **60** | **36** | **0** | **96** |
+
+*Counts verified by script against the feature tables above.*
 
 ---
 

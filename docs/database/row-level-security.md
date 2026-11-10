@@ -2,360 +2,121 @@
 
 **Document:** CHKR-DB-004  
 **Project:** Chikka Reborn  
-**Version:** 1.0  
-**Status:** Draft  
+**Version:** 2.0  
+**Status:** Proposed (implemented and tested in `supabase/migrations/` and `supabase/tests/database/`)  
 **Last Revised:** November 2026  
 
 ---
 
 ## Purpose
 
-Defines all Supabase Row Level Security (RLS) policies for every Chikka Reborn table. RLS is the primary authorisation layer — it enforces data access at the database level, independent of application code.
-
-## Scope
-
-All 13 tables. All policies must be applied within the same migration file that creates the table.
-
----
-
-## RLS Principles
-
-1. **Every table has RLS enabled.** No exceptions.
-2. **No table is accessible without an explicit policy.** When RLS is enabled without a policy, all access is denied by default.
-3. **Policies use `auth.uid()`** — Supabase's built-in function returning the UUID of the authenticated user from the JWT.
-4. **Admin access** uses a subquery against `profiles.role` — this is rechecked on every query, not cached.
-5. **Policies are tested**, not assumed. Each policy has corresponding tests in `tests/api/test_rls.py`.
-6. **Service role bypasses RLS.** The FastAPI backend uses `SUPABASE_SERVICE_ROLE_KEY` which bypasses RLS for server-side operations. The frontend uses the anon key and is fully subject to RLS.
-
----
-
-## Helper Function
-
-```sql
--- Reusable function to check if the current user is an admin
--- Used in policies that allow admin read access to all rows
-
-CREATE OR REPLACE FUNCTION is_admin()
-RETURNS BOOLEAN AS $$
-    SELECT EXISTS (
-        SELECT 1 FROM profiles
-        WHERE id = auth.uid()
-        AND role = 'admin'
-        AND is_active = TRUE
-        AND deleted_at IS NULL
-    );
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
-```
-
----
-
-## `profiles`
-
-```sql
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-
--- Users can read their own profile (always)
-CREATE POLICY "profiles_select_own" ON profiles
-    FOR SELECT USING (auth.uid() = id);
-
--- Authenticated users can read non-private, active, non-deleted profiles (for contact search)
-CREATE POLICY "profiles_select_public" ON profiles
-    FOR SELECT USING (
-        auth.uid() IS NOT NULL
-        AND is_active = TRUE
-        AND deleted_at IS NULL
-        -- Note: privacy level filtering (private/contacts-only) is enforced in application layer
-        -- The DB policy permits reads for authenticated users; the service layer further filters
-    );
-
--- Users can update only their own profile
-CREATE POLICY "profiles_update_own" ON profiles
-    FOR UPDATE USING (auth.uid() = id);
-
--- Admins can read all profiles
-CREATE POLICY "profiles_admin_select_all" ON profiles
-    FOR SELECT USING (is_admin());
-
--- Admins can update any profile (for suspension, role changes)
-CREATE POLICY "profiles_admin_update_all" ON profiles
-    FOR UPDATE USING (is_admin());
-
--- Insert is handled by Supabase Auth trigger (not direct INSERT by users)
--- No INSERT policy needed for regular users
-```
-
----
-
-## `contacts`
-
-```sql
-ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
-
--- Users can only access their own contacts
-CREATE POLICY "contacts_owner_select" ON contacts
-    FOR SELECT USING (auth.uid() = owner_id);
-
-CREATE POLICY "contacts_owner_insert" ON contacts
-    FOR INSERT WITH CHECK (auth.uid() = owner_id);
-
-CREATE POLICY "contacts_owner_update" ON contacts
-    FOR UPDATE USING (auth.uid() = owner_id);
-
-CREATE POLICY "contacts_owner_delete" ON contacts
-    FOR DELETE USING (auth.uid() = owner_id);
-```
-
----
-
-## `conversations`
-
-Access is mediated via `conversation_participants`.
-
-```sql
-ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
-
--- User can see a conversation if they are a participant
-CREATE POLICY "conversations_participant_select" ON conversations
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM conversation_participants cp
-            WHERE cp.conversation_id = id
-            AND cp.user_id = auth.uid()
-        )
-    );
-
--- Users can create conversations (application layer enforces participant rules)
-CREATE POLICY "conversations_authenticated_insert" ON conversations
-    FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
-
--- Admins can read all conversations
-CREATE POLICY "conversations_admin_select" ON conversations
-    FOR SELECT USING (is_admin());
-```
-
----
-
-## `conversation_participants`
-
-```sql
-ALTER TABLE conversation_participants ENABLE ROW LEVEL SECURITY;
-
--- User can see their own participation records
-CREATE POLICY "cp_own_select" ON conversation_participants
-    FOR SELECT USING (auth.uid() = user_id);
-
--- User can update their own last_read_at
-CREATE POLICY "cp_own_update" ON conversation_participants
-    FOR UPDATE USING (auth.uid() = user_id);
-
--- Application (service role) manages participant records — no direct INSERT by users
-```
-
----
-
-## `messages`
-
-```sql
-ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
-
--- User can read messages in conversations they participate in
-CREATE POLICY "messages_participant_select" ON messages
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM conversation_participants cp
-            WHERE cp.conversation_id = messages.conversation_id
-            AND cp.user_id = auth.uid()
-        )
-    );
-
--- User can insert messages into conversations they participate in
-CREATE POLICY "messages_participant_insert" ON messages
-    FOR INSERT WITH CHECK (
-        auth.uid() = sender_user_id
-        AND EXISTS (
-            SELECT 1 FROM conversation_participants cp
-            WHERE cp.conversation_id = messages.conversation_id
-            AND cp.user_id = auth.uid()
-        )
-    );
-
--- User can soft-delete their own messages (update deleted_at + clear body)
-CREATE POLICY "messages_sender_update_own" ON messages
-    FOR UPDATE USING (auth.uid() = sender_user_id);
-
--- Admins can read all messages
-CREATE POLICY "messages_admin_select" ON messages
-    FOR SELECT USING (is_admin());
-```
-
----
-
-## `notifications`
-
-```sql
-ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
-
--- Users can only access their own notifications
-CREATE POLICY "notifications_own_all" ON notifications
-    FOR ALL USING (auth.uid() = user_id);
-```
-
----
-
-## `outbound_sms`
-
-```sql
-ALTER TABLE outbound_sms ENABLE ROW LEVEL SECURITY;
-
--- Users can read their own outbound SMS records
-CREATE POLICY "outbound_sms_own_select" ON outbound_sms
-    FOR SELECT USING (auth.uid() = sender_user_id);
-
--- Admins can read all outbound SMS (for audit log)
-CREATE POLICY "outbound_sms_admin_select" ON outbound_sms
-    FOR SELECT USING (is_admin());
-
--- No direct INSERT by frontend users — service role only
-```
-
----
-
-## `sms_delivery_events`
-
-```sql
-ALTER TABLE sms_delivery_events ENABLE ROW LEVEL SECURITY;
-
--- Only admins can read delivery events directly
-CREATE POLICY "delivery_events_admin_select" ON sms_delivery_events
-    FOR SELECT USING (is_admin());
-
--- No access for regular users — delivery status exposed via outbound_sms.status
--- Service role used for INSERT by webhook processor
-```
-
----
-
-## `inbound_sms`
-
-```sql
-ALTER TABLE inbound_sms ENABLE ROW LEVEL SECURITY;
-
--- Matched users can read their inbound SMS
-CREATE POLICY "inbound_sms_matched_user_select" ON inbound_sms
-    FOR SELECT USING (auth.uid() = matched_user_id);
-
--- Admins can read all inbound SMS
-CREATE POLICY "inbound_sms_admin_select" ON inbound_sms
-    FOR SELECT USING (is_admin());
-
--- No INSERT/UPDATE by frontend users — service role only (webhook processor)
-```
-
----
-
-## `credit_accounts`
-
-```sql
-ALTER TABLE credit_accounts ENABLE ROW LEVEL SECURITY;
-
--- Users can read their own credit account
-CREATE POLICY "credit_accounts_own_select" ON credit_accounts
-    FOR SELECT USING (auth.uid() = user_id);
-
--- Admins can read all credit accounts
-CREATE POLICY "credit_accounts_admin_select" ON credit_accounts
-    FOR SELECT USING (is_admin());
-
--- No direct UPDATE by frontend users — service role only
--- Updates use SELECT FOR UPDATE + atomic deduction in service layer
-```
-
----
-
-## `credit_transactions`
-
-```sql
-ALTER TABLE credit_transactions ENABLE ROW LEVEL SECURITY;
-
--- Users can read their own transactions
-CREATE POLICY "credit_tx_own_select" ON credit_transactions
-    FOR SELECT USING (auth.uid() = user_id);
-
--- Admins can read all transactions
-CREATE POLICY "credit_tx_admin_select" ON credit_transactions
-    FOR SELECT USING (is_admin());
-
--- Immutable: no UPDATE or DELETE policies
--- INSERT by service role only
-```
-
----
-
-## `country_capabilities`
-
-```sql
-ALTER TABLE country_capabilities ENABLE ROW LEVEL SECURITY;
-
--- All authenticated users can read country capabilities (for capability check UI)
-CREATE POLICY "country_capabilities_authenticated_select" ON country_capabilities
-    FOR SELECT USING (auth.uid() IS NOT NULL);
-
--- Only admins can write
-CREATE POLICY "country_capabilities_admin_write" ON country_capabilities
-    FOR INSERT WITH CHECK (is_admin());
-
-CREATE POLICY "country_capabilities_admin_update" ON country_capabilities
-    FOR UPDATE USING (is_admin());
-
-CREATE POLICY "country_capabilities_admin_delete" ON country_capabilities
-    FOR DELETE USING (is_admin());
-```
-
----
-
-## `ai_usage_logs`
-
-```sql
-ALTER TABLE ai_usage_logs ENABLE ROW LEVEL SECURITY;
-
--- Only admins can read AI usage logs (for metrics dashboard)
-CREATE POLICY "ai_logs_admin_select" ON ai_usage_logs
-    FOR SELECT USING (is_admin());
-
--- No access for regular users — logs contain aggregate usage metadata
--- INSERT by service role only
-```
-
----
-
-## RLS Testing Requirements
-
-Every policy must be covered by a test in `tests/api/test_rls.py`:
-
-| Test Pattern | Description |
+Documents who can read and write what, at the database level. Policies are defined in the same migration that creates each table. They back the backend's own authorisation checks; they do not replace them (see ADL-011).
+
+## 1. Model
+
+There are three database roles in play.
+
+| Role | Who | Access |
+|---|---|---|
+| `anon` | Anyone without a session | **Nothing.** No table privileges, no policies. |
+| `authenticated` | A signed-in user, through the API key and their JWT | Narrow, column-level grants plus row policies keyed on `auth.uid()`. |
+| `service_role` | The FastAPI backend | Bypasses RLS and holds the writes. Its key is backend-only and never reaches the browser. |
+
+Administrators are `authenticated` users whose `profiles.role = 'admin'`. There is no administrator database role.
+
+### Principles
+
+1. **RLS is enabled on every table**, and a test fails the build if one is missed.
+2. **Deny by default.** With RLS on and no policy, access is refused. Six tables deliberately have no policy at all (server-only).
+3. **Two layers of restriction.** Row policies decide *which rows*. Column grants decide *which columns*. Sensitive columns (OTP state, provider IDs, block suppression, AI flags, request hashes) are not granted to clients even for their own rows.
+4. **Writes with rules are backend-only.** Anything that needs rate limits, idempotency, block handling, consent, credit movement, audit logging or re-authentication is written by the backend. Clients keep direct write access only for harmless self-service preferences.
+5. **The role comes from the database.** `private.is_admin()` reads `profiles` on every call. JWT claims such as `user_metadata` are user-editable and are never trusted.
+6. **Performance.** Policies call `(select auth.uid())` so PostgreSQL evaluates it once per statement. Membership checks use the `(conversation_id, user_id)` primary key.
+7. **Backend checks still apply.** The backend uses a privileged role, so RLS does not protect backend queries. It protects every path that reaches the database with a user's token, and limits damage if a key leaks.
+
+### Helper functions (schema `private`, not exposed by the API)
+
+| Function | Used for | Callable by |
+|---|---|---|
+| `private.is_admin()` | Admin policies | `authenticated`, `service_role` (security definer, fixed `search_path`) |
+| `private.valid_notification_overrides(jsonb)` | CHECK on notification preferences | `authenticated`, `service_role` |
+| `private.accept_contact_request`, `get_or_create_chikka_conversation`, `get_or_create_sms_conversation`, `has_active_consent`, `is_blocked_between`, `mask_phone`, `contains_unmasked_phone` | Backend operations | `service_role` only |
+
+PostgreSQL grants `EXECUTE` on new functions to `PUBLIC` by default, and a schema-scoped default-privileges revoke does not remove that. The foundation migration revokes it for the migration role, and a lockdown migration states every grant explicitly. A test calls these functions as a signed-in user and requires a refusal.
+
+## 2. Access Matrix
+
+S = select, I = insert, U = update, D = delete. "Own" means the row belongs to `auth.uid()`. "Backend" means `service_role` only.
+
+| Table | Signed-in user | Administrator (extra) |
+|---|---|---|
+| `profiles` | S own. U own, only: display name, bio, avatar path, country, language, time zone, ui mode, theme, display options, visibility, presence settings, receipts, typing, discoverability. **Not** username, role, status, AI flag, deletion fields | S all rows. No write |
+| `public_profiles` (view) | S id, username, display name, avatar, country of profiles that are active, named, and visible to the caller (self, `everyone`, or `contacts` when the owner has the caller as a contact). Hidden if the owner blocked the caller | – |
+| `phone_numbers` | S own, excluding all OTP columns | – |
+| `user_consents` | S own | – |
+| `contacts` | S own. I own SMS contacts only. U own: name, favourite, mute, recent-cleared. D own | – |
+| `contact_requests` | S where sender or recipient | – |
+| `contact_groups` | S, I, U, D own | – |
+| `contact_group_members` | S, I, D own; U position. Composite foreign keys reject cross-owner links | – |
+| `user_blocks` | S own as blocker. A blocked user sees nothing | – |
+| `abuse_reports` | S own as reporter. The reported user sees nothing | S all. U status, resolution note, resolver, resolved time only. Evidence and ownership are immutable |
+| `conversations` | S where an active member | **None.** Admins review conversations only through report snapshots |
+| `conversation_members` | S own rows only (hides other members' read positions). U own: pin, archive, mark unread, mute, per-conversation AI switch. Read markers and clearing are backend-only | – |
+| `messages` | S in conversations where an active member, **except** messages at or before the member's `cleared_before_seq`, messages the member hid, and messages suppressed by a block (unless the member is the sender). Columns `is_ai_assisted`, `ai_assistance_log_id`, `request_hash`, `suppressed_at`, `suppressed_reason`, `admin_resolved_at`, `admin_resolved_by`, `admin_resolution_note` are not granted. No client writes | **None** |
+| `message_hides` | S own | – |
+| `message_segments` | S exactly when the parent message is visible | – |
+| `message_deliveries` | S where the user is the sender of the message or the recipient. Columns limited to status, timestamps and failure class; provider IDs, error codes, HTTP status and lease are server-only | S all (same columns) |
+| `sms_routes` | S own | S all |
+| `sms_country_capabilities` | S current versions | S all versions. I new versions. U only `is_current` |
+| `provider_configurations` | None | S all |
+| `messaging_credits` | S own, balance columns only | S all |
+| `credit_transactions` | S own, excluding payment references and actor | S all (same columns). No write: adjustments go through the audited backend |
+| `notification_preferences` | S own. U own: overrides, quiet hours, previews, threshold. Bounce counters are server-only | – |
+| `notifications` | S own. U own: `read_at`, `dismissed_at` | – |
+| `ai_assistance_logs` | S own. D own (delete one entry or clear all) | **None.** Administrators see aggregates computed by the backend, never content |
+| `provider_webhooks` | None | None |
+| `message_delivery_events` | None | None |
+| `sms_opt_outs` | None | None |
+| `audit_logs` | None | None. Read through the backend |
+| `system_settings` | None | None |
+| `rate_limit_counters` | None | None |
+
+### Why the administrator column is short
+
+The brief asks for explicitly controlled administrator permissions. The database therefore grants an administrator only what a dashboard needs to read: profiles, delivery state, credits, reports, routes, provider configuration, and country capabilities (with a narrow write). Message content, conversations and AI content are not readable. Every state change an administrator makes (suspend a user, adjust credits, change provider settings, lift an opt-out) goes through the backend, which checks recent re-authentication, requires a reason, and writes `audit_logs`. The database refuses direct writes for those actions even if an administrator's token is stolen.
+
+## 3. Policy Catalogue
+
+Policy names combine the table (or an abbreviation), the operation and the audience, for example `messages_select_member` or `profiles_update_own`. Selected, non-obvious ones:
+
+| Policy | Definition (summary) |
 |---|---|
-| Positive — own data | User A can read their own row |
-| Negative — other user's data | User A cannot read User B's row |
-| Admin — all data | Admin can read any user's row |
-| Non-admin trying admin endpoint | Non-admin gets 0 rows (not an error) |
-| Unauthenticated | Unauthenticated request returns 0 rows or 401 |
+| `messages_select_member` | Active member of the conversation AND `seq > cleared_before_seq` AND (not suppressed OR caller is sender) AND no `message_hides` row for the caller |
+| `conversations_select_member` | `EXISTS` active `conversation_members` row for the caller |
+| `deliveries_select_party` | Caller is the recipient, or the sender of the parent message |
+| `contacts_insert_own_sms` | `owner_id = auth.uid()` AND `contact_type = 'sms'` (Chikka contacts exist only after an accepted request) |
+| `profiles_update_own` | Own row AND status is `pending_verification` or `active` (suspended users cannot edit) |
+| `sms_cap_select_current` / `sms_cap_*_admin` | Everyone reads current versions; only admins read history, insert, or retire a version |
+| `reports_update_admin` | `is_admin()`; column grants limit the update to workflow fields |
 
-Example test structure:
-```python
-async def test_contacts_owner_isolation(db_session, user_a_token, user_b_token):
-    """User A cannot see User B's contacts via direct DB query or API."""
-    # User A creates a contact
-    contact = await create_contact(user_a_token, ...)
-    
-    # User B should not see User A's contact
-    result = await api_client.get("/contacts", headers=user_b_token)
-    assert contact["id"] not in [c["id"] for c in result["data"]]
-```
+The complete, current list for every table is in [schema-reference.md](schema-reference.md) (each table ends with its policies), generated from the database.
 
----
+## 4. Behaviours Worth Knowing
 
-## Revision History
+- **`select *` on `messages` and some other tables fails for clients.** Column grants exclude sensitive columns, so a client must name the columns it needs. This is intentional.
+- **Blocks are invisible.** A blocked sender's message is stored with `suppressed_at`; the recipient's policy hides it, and the sender still sees it as normal. The suppression columns are not granted to anyone but the backend.
+- **A member who leaves loses access** to the conversation and its messages immediately (`left_at`).
+- **`public_profiles` runs with the view owner's rights** so it can read profiles the caller cannot read directly. Its filter uses `auth.uid()`, and its column list is deliberately four fields. Adding a column needs a privacy review.
+- **Token lifetime.** A JWT stays valid until it expires. Suspension and deletion take effect in the database at once (policies check `profiles.status` for updates and the backend checks `is_active`), but Supabase tokens already issued are valid until expiry unless the backend also revokes the session.
+- **The service key bypasses everything.** It must exist only in the backend's environment.
+
+## 5. Testing
+
+`supabase/tests/database/04_rls_isolation.test.sql` covers every row in the matrix above: positive cases, cross-user denial, administrator limits, column refusals, server-only tables, anonymous refusal, function privileges, and structural checks (RLS enabled everywhere, no `anon` or `PUBLIC` grants, no policy for those roles, no client write grants on core tables). Details: [database-test-plan.md](database-test-plan.md).
+
+## 6. Revision History
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 1.0 | November 2026 | Kiro (Principal Architect) | Initial draft — all 13 tables |
+| 1.0 | November 2026 | Kiro (Principal Architect) | Initial draft, 13 tables |
+| 2.0 | November 2026 | Kiro (Principal Architect) | 29 tables; column-level grants; narrower admin model; resolves OD-012 |

@@ -1,0 +1,16 @@
+{
+  "name": "chikka-database-tools",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Developer tooling for the Chikka Reborn database: apply migrations, seed and run SQL tests on an in-process PostgreSQL (no Docker), and generate the schema reference.",
+  "type": "module",
+  "scripts": {
+    "migrate": "node run-db.mjs",
+    "seed": "node run-db.mjs --seed",
+    "test": "node run-db.mjs --tests",
+    "schema:docs": "node generate-schema-reference.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.16"
+  }
+}

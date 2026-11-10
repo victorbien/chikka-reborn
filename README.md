@@ -114,7 +114,7 @@ chikka-reborn/
 │       └── ai-guidelines.md         # AI feature rules
 ├── frontend/                         # React application (Phase 2+)
 ├── backend/                          # FastAPI application (Phase 2+)
-└── supabase/                         # Supabase migrations and config (Phase 2+)
+└── supabase/                         # Migrations, seed, SQL tests, database tools
 ```
 
 ---
@@ -155,26 +155,41 @@ The AI assistant (powered by Amazon Bedrock) supports smart replies, translation
 
 ## Getting Started
 
-> Application code has not been written yet. This document will be updated as development progresses.
+> Application code has not been written yet. The database schema, migrations, seed and SQL tests exist.
 
 See [docs/roadmap.md](docs/roadmap.md) for the planned development sequence.
+
+### Database (no Docker needed for a quick check)
+
+Requires Node.js 20+. This applies all migrations, the development seed and the SQL tests to a throwaway in-process PostgreSQL. It sends nothing anywhere.
+
+```powershell
+cd supabase\tools
+npm ci
+npm test            # migrations + SQL tests
+npm run seed        # migrations + fictional development data
+```
+
+For local Supabase, hosted staging and production steps, see [docs/database/database-setup-guide.md](docs/database/database-setup-guide.md). Simulation is the default SMS mode; nothing in the database setup enables live sending.
 
 ---
 
 ## Documentation Index
 
-| Document | Path |
+Canonical documentation lives in these folders:
+
+| Area | Path |
 |---|---|
-| Product Requirements | [docs/prd.md](docs/prd.md) |
-| Functional Requirements | [docs/frs.md](docs/frs.md) |
-| Non-Functional Requirements | [docs/nfrs.md](docs/nfrs.md) |
-| Architecture | [docs/architecture.md](docs/architecture.md) |
-| Database Design | [docs/database-design.md](docs/database-design.md) |
-| API Design | [docs/api-design.md](docs/api-design.md) |
-| Testing Strategy | [docs/testing-strategy.md](docs/testing-strategy.md) |
-| Deployment Strategy | [docs/deployment-strategy.md](docs/deployment-strategy.md) |
-| Roadmap | [docs/roadmap.md](docs/roadmap.md) |
-| Risks & Dependencies | [docs/risks-and-dependencies.md](docs/risks-and-dependencies.md) |
+| Product (vision, requirements, features, roadmap) | [docs/product/](docs/product/) |
+| Architecture and decisions | [docs/architecture/](docs/architecture/) |
+| UI/UX and screens | [docs/design/](docs/design/) |
+| API reference | [docs/api/](docs/api/) |
+| Database, migrations, RLS | [docs/database/](docs/database/) |
+| Quality and testing | [docs/quality/](docs/quality/) |
+| Deployment and operations | [docs/deployment/](docs/deployment/) |
+| Project management (risks, backlog, decision log) | [docs/project-management/](docs/project-management/) |
+
+The ten older single-file documents directly under `docs/` (`prd.md`, `frs.md`, and so on) are marked SUPERSEDED and kept for history only.
 
 ---
 
