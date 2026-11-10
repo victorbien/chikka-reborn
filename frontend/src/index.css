@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+/*
+ * Chikka Reborn design tokens.
+ * Colours are CSS variables so Classic and Modern modes share components and
+ * differ by tokens only (data-mode on <html>). Text/background pairs are
+ * chosen for WCAG AA contrast (>= 4.5:1 for body text).
+ */
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-online: var(--online);
+  --color-away: var(--away);
+  --color-offline: var(--offline);
+  --color-danger: var(--danger);
+  --color-danger-fg: var(--danger-fg);
+  --color-success: var(--success);
+  --color-simulated: var(--simulated);
+  --color-simulated-fg: var(--simulated-fg);
+  --color-live: var(--live);
+  --color-live-fg: var(--live-fg);
+  --color-sms: var(--sms);
+  --color-sms-fg: var(--sms-fg);
+  --color-ai: var(--ai);
+  --color-ai-fg: var(--ai-fg);
+  --color-bubble-out: var(--bubble-out);
+  --color-bubble-out-fg: var(--bubble-out-fg);
+  --color-bubble-in: var(--bubble-in);
+  --color-bubble-in-fg: var(--bubble-in-fg);
+
+  --radius-control: var(--radius-control);
+  --radius-panel: var(--radius-panel);
+  --radius-bubble: var(--radius-bubble);
+
+  --font-sans: var(--font-body);
+  --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+
+  --breakpoint-xs: 20rem;
+}
+
+:root,
+:root[data-mode="modern"] {
+  --canvas: #0b1220;
+  --surface: #111a2c;
+  --surface-raised: #182338;
+  --border: #2a3855;
+  --fg: #e8eef8;
+  --fg-muted: #9db0cc;
+  --accent: #22d3ee;
+  --accent-fg: #04202a;
+  --online: #a3e635;
+  --away: #fbbf24;
+  --offline: #6b7a93;
+  --danger: #f87171;
+  --danger-fg: #2a0a0a;
+  --success: #4ade80;
+  --simulated: #fbbf24;
+  --simulated-fg: #2b1d00;
+  --live: #f43f5e;
+  --live-fg: #ffffff;
+  --sms: #38bdf8;
+  --sms-fg: #031b29;
+  --ai: #a78bfa;
+  --ai-fg: #160a33;
+  --bubble-out: #22d3ee;
+  --bubble-out-fg: #04202a;
+  --bubble-in: #182338;
+  --bubble-in-fg: #e8eef8;
+
+  --radius-control: 0.5rem;
+  --radius-panel: 0.75rem;
+  --radius-bubble: 1rem;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --text-base: 1rem;
+  --density: 1;
+  --bevel: 0 0 0 transparent;
+}
+
+/* Classic: charcoal panels, square corners, compact type, subtle bevel. */
+:root[data-mode="classic"] {
+  --canvas: #161b24;
+  --surface: #1f2632;
+  --surface-raised: #2a3342;
+  --border: #46536b;
+  --fg: #eef2f8;
+  --fg-muted: #a7b4c9;
+  --accent: #22d3ee;
+  --accent-fg: #04202a;
+  --bubble-out: #12384a;
+  --bubble-out-fg: #e9fbff;
+  --bubble-in: #2a3342;
+  --bubble-in-fg: #eef2f8;
+
+  --radius-control: 0.125rem;
+  --radius-panel: 0.25rem;
+  --radius-bubble: 0.25rem;
+  --font-body: Tahoma, Verdana, "Segoe UI", sans-serif;
+  --text-base: 0.8125rem;
+  --density: 0.8;
+  --bevel: inset 1px 1px 0 rgb(255 255 255 / 0.08), inset -1px -1px 0 rgb(0 0 0 / 0.4);
+}
+
+html {
+  color-scheme: dark;
+  font-size: var(--text-base);
+}
+
+body {
+  background: var(--canvas);
+  color: var(--fg);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Visible keyboard focus everywhere. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@utility bevel {
+  box-shadow: var(--bevel);
+}
+
+@utility pad-dense {
+  padding: calc(0.75rem * var(--density));
+}
+
+/* Retro "new message" blink; disabled when the user prefers reduced motion. */
+@keyframes chikka-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+@utility animate-notify {
+  animation: chikka-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
