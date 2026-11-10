@@ -155,9 +155,23 @@ The AI assistant (powered by Amazon Bedrock) supports smart replies, translation
 
 ## Getting Started
 
-> Application code has not been written yet. The database schema, migrations, seed and SQL tests exist.
+> Backend code has not been written yet. The database schema, migrations, seed and SQL tests exist. The frontend has a design system, shared components and a style guide page; application screens are being added incrementally.
 
 See [docs/roadmap.md](docs/roadmap.md) for the planned development sequence.
+
+### Frontend
+
+Requires Node.js 22.19+ (Vite 8 and Vitest 5 declare this; 22.17 builds and tests pass but npm warns).
+
+```powershell
+cd frontend
+npm ci
+npm run dev         # style guide at http://localhost:5173 with the Classic/Modern switch
+npm run test        # vitest --run
+npm run build       # tsc --noEmit + vite build
+```
+
+The selected display mode is stored in `localStorage` (`chikka.displayMode`). No provider credentials or environment variables are needed by the frontend yet.
 
 ### Database (no Docker needed for a quick check)
 

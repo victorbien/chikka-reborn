@@ -125,6 +125,7 @@ These decisions are blocking or will block phase starts. Each has a `Due By` dat
 | DEC-ARCH-013 | AI provider abstraction with staged, non-sending pipeline | ADL-015 | Refines DEC-ARCH-003, DEC-ARCH-004, DEC-PROD-002 |
 | DEC-ARCH-014 | Postgres job queue and outbox for delivery and retry | ADL-016 | Resolves ADL-009 |
 | DEC-ARCH-015 | Container deployment, two process types, gated production | ADL-017 | Partly informs OD-003, OD-008 |
+| DEC-ARCH-017 | Frontend UI dependencies pinned: Tailwind CSS 4.3.5, Radix primitives (dialog, slot, switch, tabs, tooltip), class-variance-authority, clsx, tailwind-merge, lucide-react. Mode theming via CSS variables and `data-mode`. | Not yet an ADL entry | Implements `docs/design/design-system.md`; all are the shadcn/ui foundation already approved in the stack |
 
 ---
 

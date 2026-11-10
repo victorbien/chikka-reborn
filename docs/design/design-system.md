@@ -274,7 +274,27 @@ Use **Lucide React** icon library (included with shadcn/ui).
 
 ---
 
-## 10. Revision History
+## 10. Implemented Foundation (frontend/)
+
+Tokens live in `frontend/src/index.css` as CSS variables, exposed to Tailwind through `@theme`. Classic and Modern share components; `data-mode` on `<html>` swaps tokens (radius, type scale, density, bevel). The mode is persisted in `localStorage` key `chikka.displayMode` by `DisplayModeProvider`.
+
+| Token group | Modern | Classic |
+|---|---|---|
+| Canvas / surface | navy `#0b1220` / `#111a2c` | charcoal `#161b24` / `#1f2632` |
+| Accent | cyan `#22d3ee` | cyan `#22d3ee` |
+| Presence | online lime `#a3e635`, away amber, offline hollow grey | same |
+| Radius | 8 / 12 / 16 px | 2 / 4 / 4 px |
+| Type | system sans, 16 px | Tahoma/Verdana, 13 px |
+
+Channel and mode labels: Internet (cyan outline), SMS out / SMS in (sky), SIMULATED (amber), LIVE (rose), AI-assisted (violet). Presence uses shape as well as colour. Animations are limited to a notification pulse and are disabled under `prefers-reduced-motion`.
+
+Implemented in `components/shared/`: Avatar, PresenceIndicator, ChannelBadge (with SimulatedBadge, AiAssistedBadge), MessageStatusLabel, MessageBubble, MessageComposer, SmsCostEstimate, CreditBalance, ContactListItem, ConversationItem, NotificationItem, AiSuggestionPanel, EmptyState, ErrorState (error, offline, forbidden), ConfirmDialog, ModeSwitcher. Primitives in `components/ui/`: Button, Dialog.
+
+Behaviour rules enforced and tested: "accepted" never renders as delivered; simulated SMS never shows a credit charge; AI suggestions only fill the composer; the composer sends only on an explicit action; attachments are shown disabled until supported.
+
+---
+
+## 11. Revision History
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
