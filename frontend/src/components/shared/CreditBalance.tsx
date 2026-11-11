@@ -8,7 +8,12 @@ export interface CreditBalanceProps {
   className?: string;
 }
 
-export function CreditBalance({ available, reserved, lowThreshold = 1, className }: CreditBalanceProps) {
+export function CreditBalance({
+  available,
+  reserved,
+  lowThreshold = 1,
+  className,
+}: CreditBalanceProps) {
   const low = available < lowThreshold;
   return (
     <div className={cn("inline-flex items-center gap-2", className)}>

@@ -223,44 +223,38 @@ The Swagger UI and ReDoc are disabled in production for security. The raw spec i
 | AI Assistant | `docs/api/ai-api.md` | `/api/v1/ai` |
 | Notifications | `docs/api/notifications-api.md` | `/api/v1/notifications` |
 | Administration | `docs/api/administration-api.md` | `/api/v1/admin`, `/api/v1/credits` |
-| Health | This document | `/health` |
+| Health | This document | `/api/v1/health`, `/healthz`, `/readyz` |
 
 ---
 
-## 12. Health Endpoint
+## 12. Health Endpoints
 
-```
-GET /health
-```
+| Path | Purpose |
+|---|---|
+| `GET /api/v1/health` | Liveness plus configuration summary. Always 200 while the process is up. |
+| `GET /api/v1/health/ready` | Readiness. 503 when a configured dependency (the database) is unavailable. |
+| `GET /healthz`, `GET /readyz` | Unversioned aliases of the two above, for hosting-platform checks. |
 
-No authentication required. Used by load balancers and monitoring.
+No authentication required. Used by load balancers, monitoring and the frontend status card.
 
 **Response 200:**
 ```json
 {
-  "status": "healthy",
-  "database": "connected",
-  "sms_provider": "mock",
-  "sms_provider_status": "ok",
-  "version": "1.0.0",
+  "status": "ok",
+  "service": "chikka-reborn-api",
+  "version": "0.1.0",
   "environment": "staging",
-  "timestamp": "2026-11-09T12:00:00Z"
+  "sms_mode": "simulation",
+  "database": "ok",
+  "request_id": "8b39e0a6d8c5499193a646b9737afdd0"
 }
 ```
 
-**Response 503 (unhealthy):**
-```json
-{
-  "status": "unhealthy",
-  "database": "error",
-  "sms_provider": "live",
-  "sms_provider_status": "unreachable",
-  "timestamp": "2026-11-09T12:00:00Z"
-}
-```
+`status` is `ok` or `degraded`. `database` is `ok`, `unavailable` or `not_configured`. `sms_mode` is `simulation` (mock provider) or `live`. The readiness route returns the same body with HTTP 503 when `status` is `degraded`.
+
+> Deployment and monitoring documents that still say `GET /health` returning `healthy`/`unhealthy` should be read as `/healthz` and `/readyz` with the shape above.
 
 ---
-
 ## 13. Revision History
 
 | Version | Date | Author | Notes |

@@ -1,8 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { DisplayModeProvider } from "@/lib/display-mode";
-import { StyleGuide } from "@/routes/StyleGuide";
-import "./index.css";
+import { App } from "@/app/App";
+import "@/styles/index.css";
 
 const container = document.getElementById("root");
 if (!container) {
@@ -11,8 +10,6 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <DisplayModeProvider>
-      <StyleGuide />
-    </DisplayModeProvider>
+    <App />
   </StrictMode>,
 );

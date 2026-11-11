@@ -1,0 +1,12 @@
+# Secrets and local environment (examples are committed, real values never)
+.env
+.env.*
+!.env.example
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.log
+
+# Per-package ignores live in frontend/.gitignore, backend/.gitignore and
+# supabase/tools/.gitignore.

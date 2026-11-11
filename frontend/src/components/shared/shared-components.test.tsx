@@ -68,12 +68,16 @@ describe("MessageBubble", () => {
 
 describe("SmsCostEstimate", () => {
   it("charges nothing in simulation", () => {
-    render(<SmsCostEstimate body="Hello" smsMode="simulated" creditsPerSegment={1} creditBalance={0} />);
+    render(
+      <SmsCostEstimate body="Hello" smsMode="simulated" creditsPerSegment={1} creditBalance={0} />,
+    );
     expect(screen.getByText(/No credits charged/)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
   it("warns when live cost exceeds balance", () => {
-    render(<SmsCostEstimate body="Hello" smsMode="live" creditsPerSegment={1} creditBalance={0.5} />);
+    render(
+      <SmsCostEstimate body="Hello" smsMode="live" creditsPerSegment={1} creditBalance={0.5} />,
+    );
     expect(screen.getByRole("alert")).toHaveTextContent("Not enough credits");
   });
 });
@@ -90,7 +94,14 @@ describe("MessageComposer", () => {
   });
 
   it("disables sending and explains why when blocked", () => {
-    render(<MessageComposer {...base} value="Hi" onSend={vi.fn()} disabledReason="Recipient opted out." />);
+    render(
+      <MessageComposer
+        {...base}
+        value="Hi"
+        onSend={vi.fn()}
+        disabledReason="Recipient opted out."
+      />,
+    );
     expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
     expect(screen.getByRole("status")).toHaveTextContent("Recipient opted out.");
   });
@@ -113,7 +124,15 @@ describe("ConfirmDialog", () => {
     const onConfirm = vi.fn();
     const onOpenChange = vi.fn();
     render(
-      <ConfirmDialog open onOpenChange={onOpenChange} title="Delete?" description="Sure?" confirmLabel="Delete" onConfirm={onConfirm} destructive />,
+      <ConfirmDialog
+        open
+        onOpenChange={onOpenChange}
+        title="Delete?"
+        description="Sure?"
+        confirmLabel="Delete"
+        onConfirm={onConfirm}
+        destructive
+      />,
     );
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     expect(onConfirm).toHaveBeenCalled();

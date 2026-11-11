@@ -85,7 +85,11 @@ export function MessageComposer({
             className="w-full resize-none rounded-control border border-border bg-canvas p-2 text-sm text-fg placeholder:text-fg-muted disabled:opacity-60"
           />
         </div>
-        <Button type="submit" disabled={!canSend} aria-label={isSending ? "Sending" : "Send message"}>
+        <Button
+          type="submit"
+          disabled={!canSend}
+          aria-label={isSending ? "Sending" : "Send message"}
+        >
           <Send aria-hidden className="size-4" />
           <span className="hidden sm:inline">{isSending ? "Sending…" : "Send"}</span>
         </Button>

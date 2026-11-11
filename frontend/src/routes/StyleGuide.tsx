@@ -39,7 +39,7 @@ export function StyleGuide() {
   const [selected, setSelected] = useState("Jericho Santos");
 
   return (
-    <main className="mx-auto max-w-3xl space-y-4 p-4">
+    <div className="mx-auto max-w-3xl space-y-4 p-4">
       <header>
         <h1 className="text-2xl font-bold">Chikka Reborn</h1>
         <p className="text-sm text-fg-muted">The Messenger That Refused to Die.</p>
@@ -78,21 +78,58 @@ export function StyleGuide() {
 
       <Section title="Messages">
         <ul className="space-y-2">
-          <MessageBubble body="Kumusta ka?" timestamp="12:34" direction="incoming" channel="internet" senderName="Jericho" />
-          <MessageBubble body="Hello lola!" timestamp="12:36" direction="outgoing" channel="sms-outbound" smsMode="simulated" status="accepted" />
-          <MessageBubble body="Sige, text mo ko mamaya." timestamp="12:37" direction="incoming" channel="sms-inbound" smsMode="simulated" senderName="Lola" />
+          <MessageBubble
+            body="Kumusta ka?"
+            timestamp="12:34"
+            direction="incoming"
+            channel="internet"
+            senderName="Jericho"
+          />
+          <MessageBubble
+            body="Hello lola!"
+            timestamp="12:36"
+            direction="outgoing"
+            channel="sms-outbound"
+            smsMode="simulated"
+            status="accepted"
+          />
+          <MessageBubble
+            body="Sige, text mo ko mamaya."
+            timestamp="12:37"
+            direction="incoming"
+            channel="sms-inbound"
+            smsMode="simulated"
+            senderName="Lola"
+          />
           {sent.map((body, index) => (
-            <MessageBubble key={`${index}-${body}`} body={body} timestamp="now" direction="outgoing" channel={channel} smsMode={channel === "internet" ? undefined : smsMode} status="queued" />
+            <MessageBubble
+              key={`${index}-${body}`}
+              body={body}
+              timestamp="now"
+              direction="outgoing"
+              channel={channel}
+              smsMode={channel === "internet" ? undefined : smsMode}
+              status="queued"
+            />
           ))}
         </ul>
       </Section>
 
       <Section title="Composer">
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="secondary" onClick={() => setChannel(channel === "internet" ? "sms-outbound" : "internet")}>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => setChannel(channel === "internet" ? "sms-outbound" : "internet")}
+          >
             Channel: {channel === "internet" ? "Internet" : "SMS"}
           </Button>
-          <Button size="sm" variant="secondary" onClick={() => setSmsMode(smsMode === "simulated" ? "live" : "simulated")} disabled={channel === "internet"}>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => setSmsMode(smsMode === "simulated" ? "live" : "simulated")}
+            disabled={channel === "internet"}
+          >
             SMS mode: {smsMode}
           </Button>
         </div>
@@ -100,17 +137,28 @@ export function StyleGuide() {
           <AiSuggestionPanel
             state="ready"
             suggestions={SUGGESTIONS}
-            onUse={(text) => { setDraft(text); setAiAssisted(true); }}
+            onUse={(text) => {
+              setDraft(text);
+              setAiAssisted(true);
+            }}
             onRegenerate={() => setAiAssisted(false)}
             onDismiss={() => setShowAi(false)}
           />
         ) : (
-          <Button size="sm" variant="ghost" onClick={() => setShowAi(true)}>Show AI suggestions</Button>
+          <Button size="sm" variant="ghost" onClick={() => setShowAi(true)}>
+            Show AI suggestions
+          </Button>
         )}
         <MessageComposer
           value={draft}
-          onChange={(value) => { setDraft(value); }}
-          onSend={() => { setSent((previous) => [...previous, draft]); setDraft(""); setAiAssisted(false); }}
+          onChange={(value) => {
+            setDraft(value);
+          }}
+          onSend={() => {
+            setSent((previous) => [...previous, draft]);
+            setDraft("");
+            setAiAssisted(false);
+          }}
           channel={channel}
           smsMode={smsMode}
           creditsPerSegment={0.05}
@@ -122,13 +170,39 @@ export function StyleGuide() {
       <Section title="Credits, notifications, states">
         <CreditBalance available={0.5} reserved={0.1} />
         <ul>
-          <NotificationItem title="Low credit balance" description="Top up before sending live SMS." timestamp="Today" kind="warning" isRead={read} onMarkRead={() => setRead(true)} />
+          <NotificationItem
+            title="Low credit balance"
+            description="Top up before sending live SMS."
+            timestamp="Today"
+            kind="warning"
+            isRead={read}
+            onMarkRead={() => setRead(true)}
+          />
         </ul>
-        <EmptyState icon={Inbox} title="No conversations yet" description="Add a contact to start your first chat." action={<Button onClick={() => setSelected("")}>Add a contact</Button>} />
-        <ErrorState kind="offline" message="Check your connection and try again." onRetry={() => setConfirmOpen(false)} />
-        <Button variant="destructive" onClick={() => setConfirmOpen(true)}>Delete conversation</Button>
-        <ConfirmDialog open={confirmOpen} onOpenChange={setConfirmOpen} title="Delete conversation?" description="This removes the conversation from your account." confirmLabel="Delete" destructive onConfirm={() => setSent([])} />
+        <EmptyState
+          icon={Inbox}
+          title="No conversations yet"
+          description="Add a contact to start your first chat."
+          action={<Button onClick={() => setSelected("")}>Add a contact</Button>}
+        />
+        <ErrorState
+          kind="offline"
+          message="Check your connection and try again."
+          onRetry={() => setConfirmOpen(false)}
+        />
+        <Button variant="destructive" onClick={() => setConfirmOpen(true)}>
+          Delete conversation
+        </Button>
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title="Delete conversation?"
+          description="This removes the conversation from your account."
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => setSent([])}
+        />
       </Section>
-    </main>
+    </div>
   );
 }

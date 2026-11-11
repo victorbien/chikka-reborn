@@ -35,7 +35,10 @@ export function NotificationItem({
         isRead ? "bg-surface" : "bg-surface-raised",
       )}
     >
-      <Icon aria-hidden className={cn("mt-0.5 size-5 shrink-0", tone, !isRead && "animate-notify")} />
+      <Icon
+        aria-hidden
+        className={cn("mt-0.5 size-5 shrink-0", tone, !isRead && "animate-notify")}
+      />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold">
           <span className="sr-only">{label}: </span>

@@ -32,7 +32,9 @@ export function AiSuggestionPanel({
           <X aria-hidden className="size-4" />
         </Button>
       </header>
-      <p className="text-xs text-fg-muted">Suggestions only. Nothing is sent until you press Send.</p>
+      <p className="text-xs text-fg-muted">
+        Suggestions only. Nothing is sent until you press Send.
+      </p>
 
       <div aria-live="polite" className="mt-2">
         {state === "loading" ? <p className="text-sm text-fg-muted">Thinking…</p> : null}
@@ -51,7 +53,13 @@ export function AiSuggestionPanel({
         ) : null}
       </div>
 
-      <Button size="sm" variant="ghost" onClick={onRegenerate} disabled={state === "loading"} className="mt-2">
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={onRegenerate}
+        disabled={state === "loading"}
+        className="mt-2"
+      >
         <RefreshCw aria-hidden className="size-4" />
         Regenerate
       </Button>

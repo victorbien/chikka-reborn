@@ -4,8 +4,16 @@ import type { MessageChannel, SmsMode } from "@/lib/types";
 
 const CHANNELS: Record<MessageChannel, { label: string; Icon: LucideIcon; className: string }> = {
   internet: { label: "Internet", Icon: Globe, className: "border-accent text-accent" },
-  "sms-outbound": { label: "SMS out", Icon: PhoneOutgoing, className: "bg-sms text-sms-fg border-transparent" },
-  "sms-inbound": { label: "SMS in", Icon: PhoneIncoming, className: "bg-sms text-sms-fg border-transparent" },
+  "sms-outbound": {
+    label: "SMS out",
+    Icon: PhoneOutgoing,
+    className: "bg-sms text-sms-fg border-transparent",
+  },
+  "sms-inbound": {
+    label: "SMS in",
+    Icon: PhoneIncoming,
+    className: "bg-sms text-sms-fg border-transparent",
+  },
 };
 
 export interface ChannelBadgeProps {
@@ -15,7 +23,8 @@ export interface ChannelBadgeProps {
   className?: string;
 }
 
-const BADGE = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold";
+const BADGE =
+  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold";
 
 export function ChannelBadge({ channel, smsMode, className }: ChannelBadgeProps) {
   const { label, Icon, className: tone } = CHANNELS[channel];

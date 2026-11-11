@@ -21,8 +21,14 @@ export function SmsCostEstimate({
   const estimate = estimateSms(body);
   const cost = estimate.segments * creditsPerSegment;
   const simulated = smsMode === "simulated";
-  const shortfallBalance = !simulated && creditBalance !== undefined && cost > creditBalance ? creditBalance : null;
-  const fill = Math.min(100, Math.round((estimate.characters / (estimate.perSegment * Math.max(1, estimate.segments))) * 100));
+  const shortfallBalance =
+    !simulated && creditBalance !== undefined && cost > creditBalance ? creditBalance : null;
+  const fill = Math.min(
+    100,
+    Math.round(
+      (estimate.characters / (estimate.perSegment * Math.max(1, estimate.segments))) * 100,
+    ),
+  );
 
   return (
     <div className={cn("space-y-1 text-xs text-fg-muted", className)}>
@@ -38,13 +44,15 @@ export function SmsCostEstimate({
         )}
       />
       <p aria-live="polite">
-        {estimate.characters} chars · {estimate.segments} {estimate.segments === 1 ? "segment" : "segments"} ·{" "}
+        {estimate.characters} chars · {estimate.segments}{" "}
+        {estimate.segments === 1 ? "segment" : "segments"} ·{" "}
         {estimate.encoding === "gsm7" ? "GSM-7" : "Unicode"} ·{" "}
         {simulated ? "No credits charged (simulation)" : `${cost.toFixed(2)} credits`}
       </p>
       {shortfallBalance !== null ? (
         <p role="alert" className="text-danger">
-          Not enough credits. This message needs {cost.toFixed(2)}, you have {shortfallBalance.toFixed(2)}.
+          Not enough credits. This message needs {cost.toFixed(2)}, you have{" "}
+          {shortfallBalance.toFixed(2)}.
         </p>
       ) : null}
     </div>

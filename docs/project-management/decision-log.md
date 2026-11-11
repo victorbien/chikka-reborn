@@ -126,6 +126,7 @@ These decisions are blocking or will block phase starts. Each has a `Due By` dat
 | DEC-ARCH-014 | Postgres job queue and outbox for delivery and retry | ADL-016 | Resolves ADL-009 |
 | DEC-ARCH-015 | Container deployment, two process types, gated production | ADL-017 | Partly informs OD-003, OD-008 |
 | DEC-ARCH-017 | Frontend UI dependencies pinned: Tailwind CSS 4.3.5, Radix primitives (dialog, slot, switch, tabs, tooltip), class-variance-authority, clsx, tailwind-merge, lucide-react. Mode theming via CSS variables and `data-mode`. | Not yet an ADL entry | Implements `docs/design/design-system.md`; all are the shadcn/ui foundation already approved in the stack |
+| DEC-ARCH-018 | Foundation dependencies pinned. Frontend: @tanstack/react-query 5.107.1, zod 4.6.7 (both in the approved stack); dev tooling eslint 10.14.0, typescript-eslint 8.72.2, eslint-plugin-react-hooks 7.1.1, prettier 3.9.10. Backend: fastapi 0.162.4, uvicorn 0.54.0, pydantic 2.14.3, pydantic-settings 2.16.2, sqlalchemy 2.1.8, asyncpg 0.32.0 (async PostgreSQL driver required by async SQLAlchemy), PyJWT 2.15.1 (verifies Supabase access tokens; chosen over python-jose, which is less maintained); dev: pytest, pytest-asyncio, pytest-cov, httpx (TestClient), ruff, mypy. Health is served at `/api/v1/health` and `/api/v1/health/ready` for clients, with `/healthz` and `/readyz` aliases for platforms (ADL health requirement). | Not yet an ADL entry | Implements Implementation 01; supersedes the `/health` path in older deployment docs (see api-overview section 12) |
 
 ---
 

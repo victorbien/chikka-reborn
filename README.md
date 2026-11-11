@@ -112,8 +112,8 @@ chikka-reborn/
 │       ├── development-principles.md # Coding and architecture standards
 │       ├── sms-guidelines.md         # SMS implementation rules
 │       └── ai-guidelines.md         # AI feature rules
-├── frontend/                         # React application (Phase 2+)
-├── backend/                          # FastAPI application (Phase 2+)
+├── frontend/                         # React application (app shell + design system)
+├── backend/                          # FastAPI application (foundation)
 └── supabase/                         # Migrations, seed, SQL tests, database tools
 ```
 
@@ -155,9 +155,24 @@ The AI assistant (powered by Amazon Bedrock) supports smart replies, translation
 
 ## Getting Started
 
-> Backend code has not been written yet. The database schema, migrations, seed and SQL tests exist. The frontend has a design system, shared components and a style guide page; application screens are being added incrementally.
+> The foundation is in place: a FastAPI backend (health, docs, config, logging, error envelope, JWT dependency, database connection), a React app shell (routing, layouts, API client, query layer) and the design system. No business features exist yet. The database schema, migrations, seed and SQL tests are in `supabase/`.
 
 See [docs/roadmap.md](docs/roadmap.md) for the planned development sequence.
+
+### Quick start (Windows PowerShell)
+
+```powershell
+scripts\setup.ps1            # venv, dependencies, copies .env.example files
+scripts\dev-backend.ps1      # http://localhost:8000  (docs at /docs)
+scripts\dev-frontend.ps1     # http://localhost:5173  (second terminal)
+scripts\check.ps1            # lint, format, types, tests, build for both apps
+```
+
+Full guide: [docs/deployment/local-development.md](docs/deployment/local-development.md). Per-app guides: [backend/README.md](backend/README.md), [frontend/README.md](frontend/README.md).
+
+### Environment variables
+
+Copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env.local`. Everything is optional for a first start. Reference: [docs/deployment/environment-configuration.md](docs/deployment/environment-configuration.md). SMS defaults to `SMS_PROVIDER_MODE=mock` (simulation); `live` is refused unless `SMS_LIVE_CONFIRMED=true`.
 
 ### Frontend
 
@@ -166,13 +181,26 @@ Requires Node.js 22.19+ (Vite 8 and Vitest 5 declare this; 22.17 builds and test
 ```powershell
 cd frontend
 npm ci
-npm run dev         # style guide at http://localhost:5173 with the Classic/Modern switch
+npm run dev         # http://localhost:5173
+npm run lint
 npm run test        # vitest --run
 npm run build       # tsc --noEmit + vite build
 ```
 
-The selected display mode is stored in `localStorage` (`chikka.displayMode`). No provider credentials or environment variables are needed by the frontend yet.
+The selected display mode is stored in `localStorage` (`chikka.displayMode`). The frontend holds no provider credentials; only `VITE_`-prefixed public values.
 
+### Backend
+
+Requires Python 3.12.
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+copy .env.example .env
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
+.\.venv\Scripts\python.exe -m pytest
+```
 ### Database (no Docker needed for a quick check)
 
 Requires Node.js 20+. This applies all migrations, the development seed and the SQL tests to a throwaway in-process PostgreSQL. It sends nothing anywhere.

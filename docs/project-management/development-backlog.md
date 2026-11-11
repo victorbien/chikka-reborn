@@ -30,12 +30,12 @@ Phase 0 (current) through Phase 2 (planned). Phase 3+ backlog is outlined pendin
 | BL-P0-004 | Create Supabase staging project | DevOps | ⬜ Open |
 | BL-P0-005 | Connect Vercel to GitHub repository | DevOps | ⬜ Open |
 | BL-P0-006 | Create backend hosting project | DevOps | ⬜ Open |
-| BL-P0-007 | Scaffold frontend (Vite + React + Tailwind + shadcn) | Engineering | ⬜ Open |
-| BL-P0-008 | Scaffold backend (FastAPI + SQLAlchemy + pydantic-settings) | Engineering | ⬜ Open |
-| BL-P0-009 | Implement /health endpoint | Engineering | ⬜ Open |
+| BL-P0-007 | Scaffold frontend (Vite + React + Tailwind + shadcn) | Engineering | ✅ Done |
+| BL-P0-008 | Scaffold backend (FastAPI + SQLAlchemy + pydantic-settings) | Engineering | ✅ Done |
+| BL-P0-009 | Implement /health endpoint | Engineering | ✅ Done |
 | BL-P0-010 | Configure GitHub Actions CI pipeline (lint + type + test + build) | DevOps | ⬜ Open |
-| BL-P0-011 | Create backend `.env.example` | Engineering | ⬜ Open |
-| BL-P0-012 | Create frontend `.env.example` | Engineering | ⬜ Open |
+| BL-P0-011 | Create backend `.env.example` | Engineering | ✅ Done |
+| BL-P0-012 | Create frontend `.env.example` | Engineering | ✅ Done |
 | BL-P0-013 | Deploy empty scaffold to staging | DevOps | ⬜ Open |
 | BL-P0-014 | Verify Phase 0 acceptance criteria (AC-0-001 through AC-0-012) | Engineering | ⬜ Open |
 

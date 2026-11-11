@@ -21,7 +21,11 @@ export interface PresenceIndicatorProps {
   className?: string;
 }
 
-export function PresenceIndicator({ status, showLabel = false, className }: PresenceIndicatorProps) {
+export function PresenceIndicator({
+  status,
+  showLabel = false,
+  className,
+}: PresenceIndicatorProps) {
   return (
     <span className={cn("inline-flex items-center gap-1.5", showLabel && className)}>
       <span
