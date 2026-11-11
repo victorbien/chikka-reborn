@@ -1,5 +1,7 @@
 # Architectural Risks and Technical Dependencies
 
+> **SUPERSEDED (November 2026).** Retained for history. The canonical version is in docs/project-management/risk-register.md and project-management/assumptions-and-constraints.md. Requirement IDs here use the older scheme (e.g. FR-A-001); see the 'Was:' fields in docs/product/functional-requirements.md for the mapping.
+
 **Project:** Chikka Reborn  
 **Version:** 1.0  
 **Status:** Draft  
@@ -200,8 +202,8 @@ Dependencies that must be resolved before the listed phase can begin or complete
 
 | Service | Purpose | Risk if Unavailable | Mitigation |
 |---|---|---|---|
-| Supabase | Database, Auth, Realtime | Platform non-functional | Supabase has 99.9% SLA on Pro plan |
-| Twilio | Live SMS | SMS features non-functional | Simulation mode available; Twilio has 99.95% SLA |
+| Supabase | Database, Auth, Realtime | Platform non-functional | Verify current SLA and plan features (PITR, connection limits) before production |
+| Twilio | Live SMS | SMS features non-functional | Simulation mode available for testing (never a silent substitute); verify provider SLA before launch |
 | Amazon Bedrock | AI features | AI features non-functional | AI failures degrade gracefully; core messaging unaffected |
 | Vercel | Frontend hosting | Platform inaccessible | Vercel has strong global CDN redundancy |
 | Backend host (TBD) | API serving | Platform non-functional | Choose provider with managed rolling deploys |

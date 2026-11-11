@@ -91,7 +91,9 @@ sequenceDiagram
 | Access token (JWT) | In-memory (React state) | Not persisted to disk; cleared on page close |
 | Refresh token | `sessionStorage` or Supabase SDK managed | Survives page refresh; cleared on tab close |
 
-`localStorage` is never used for tokens — it is accessible to any JavaScript on the page (XSS risk).
+**Target policy:** `localStorage` should not hold tokens, because it is readable by any script on the page (XSS risk).
+
+> **⚠ Unresolved (OD-014):** the Supabase JS client persists sessions in `localStorage` by default. Meeting this policy requires configuring a custom storage adapter (in-memory or `sessionStorage`) at client creation, and confirming how silent refresh behaves across page reloads and tabs. Until that is verified against the current SDK documentation, treat the policy above as a requirement, not a confirmed behaviour.
 
 ### Session Expiry
 

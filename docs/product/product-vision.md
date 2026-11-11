@@ -38,7 +38,7 @@ This project is its resurrection.
 
 Despite smartphone proliferation, significant communication barriers remain in 2026:
 
-- An estimated 1.8 billion people globally still use feature phones or basic SMS-capable handsets.
+- A large number of people globally still use feature phones or basic SMS-capable handsets. *(Source and figure to be added after verification; no statistic is claimed here.)*
 - Internet connectivity in rural and lower-income regions of Southeast Asia, Africa, and Latin America remains inconsistent and expensive.
 - Existing messaging platforms — WhatsApp, Messenger, iMessage, Telegram — require both parties to have the same app and an internet connection.
 - No mainstream platform today allows an internet user to seamlessly reach a mobile-only user without that user installing anything.

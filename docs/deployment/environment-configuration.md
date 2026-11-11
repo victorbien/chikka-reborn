@@ -50,7 +50,16 @@ All three environments: development, staging, production.
 | `SUPABASE_SERVICE_ROLE_KEY` | Backend service role key — bypasses RLS | `eyJhbGci...` |
 | `SUPABASE_JWT_SECRET` | Used to verify Supabase JWTs in FastAPI | `super-secret-...` |
 | `SMS_PROVIDER_MODE` | `mock` or `live` | `mock` |
-| `LOG_LEVEL` | Log verbosity | `INFO` |
+| `LOG_LEVEL` | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`) | `INFO` |
+| `APP_ENV` | `development`, `test`, `staging` or `production`. API docs are disabled in `production` | `development` |
+| `DATABASE_URL` | Supabase PostgreSQL connection string. `postgresql://` is upgraded to the asyncpg driver. Optional at startup: when unset the health check reports `not_configured` | `postgresql://postgres:...@db.xxx.supabase.co:5432/postgres` |
+| `SMS_LIVE_CONFIRMED` | Must be `true` for `SMS_PROVIDER_MODE=live`; otherwise startup fails. Never set it in development | `false` |
+| `SUPABASE_ANON_KEY` | Public anon key; identifies the project to Supabase Auth for user-level calls (sign-up, sign-in, refresh). Without it and `SUPABASE_URL`, auth endpoints answer 503 | `eyJhbGci...` |
+| `APP_SECRET_KEY` | Keys the HMACs for rate-limit subjects and mobile OTP hashes. Required (32+ characters) in `staging` and `production`; development uses a per-process random key | 64 random characters |
+| `FRONTEND_BASE_URL` | SPA origin used in email links (`/auth/verify-email`, `/auth/reset-password`) | `http://localhost:5173` |
+| `COOKIE_SECURE` | Override for the refresh cookie `Secure` flag. Default: on in `staging`/`production`, off in local development | (unset) |
+| `TERMS_VERSION`, `PRIVACY_VERSION` | Notice versions recorded with registration consent | `2026-11-01` |
+| `AVATAR_BUCKET` | Supabase Storage bucket for profile photos | `avatars` |
 
 ### Required — Live SMS Mode Only
 
@@ -76,7 +85,7 @@ These variables are validated at startup when `SMS_PROVIDER_MODE=live`. The appl
 
 | Variable | Default | Description |
 |---|---|---|
-| `DB_POOL_SIZE` | `10` | SQLAlchemy connection pool size |
+| `DB_POOL_SIZE` | `10` | SQLAlchemy connection pool size (1-50) |
 | `DB_MAX_OVERFLOW` | `20` | Pool overflow connections |
 | `RATE_LIMIT_LOGIN` | `5` | Max failed logins per 15 min per IP |
 | `RATE_LIMIT_SMS_DAILY` | `500` | Max SMS sends per user per day |
@@ -98,14 +107,19 @@ All frontend variables are prefixed with `VITE_` — they are bundled into the f
 | `VITE_SUPABASE_URL` | Supabase project URL | `https://xxx.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | Supabase public anon key | `eyJhbGci...` |
 | `VITE_API_BASE_URL` | Backend API base URL | `https://api.chikka-reborn.app` |
+| `VITE_APP_ENV` | `development`, `test`, `staging` or `production` (default `development`) | `production` |
+
+Values are validated at startup with Zod; an invalid URL or environment name stops the app with a readable message. Blank values (as left by copying `.env.example`) count as unset.
 
 ---
 
 ## 5. `.env.example` Files
 
-Two example files are committed to the repository. They document every variable with placeholder values.
+Two example files are committed (`backend/.env.example` and `frontend/.env.example`; the real files are `backend/.env` and `frontend/.env.local`) to the repository. They document every variable with placeholder values.
 
 ### `backend/.env.example`
+
+> The committed file currently contains only the variables the code reads (foundation plus Module A: `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_SECRET_KEY`, `FRONTEND_BASE_URL`, `COOKIE_SECURE`, `TERMS_VERSION`, `PRIVACY_VERSION`, `AVATAR_BUCKET`). Twilio, AWS/Bedrock, service-role and rate-limit variables are added in the phase that first reads them, so the example never lists settings that do nothing.
 
 ```env
 # ─── Supabase ────────────────────────────────────────────────

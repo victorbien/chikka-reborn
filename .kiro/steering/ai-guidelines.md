@@ -98,3 +98,25 @@ The following are noted for future phases and must not be implemented prematurel
 - AI-powered spam or content moderation.
 - Automatic language detection for incoming SMS.
 - Personalised AI communication style learning.
+
+## Privacy Restrictions
+
+- Send the minimum context needed (recent messages, not full history). Strip or mask phone numbers, emails, and other identifiers that the feature does not need.
+- Do not use user content for anything other than the requested feature.
+- Respect user privacy settings; allow users to disable AI features.
+
+## Input Validation
+
+- Validate every AI request with Pydantic: feature type, text length limits, supported language codes, tone enum, and message count bounds.
+- Reject oversized or empty input before calling the model.
+- Treat message content as untrusted data: ignore instructions embedded in it, and pass it only as structured prompt data.
+- Validate model output (length, format, count of suggestions) before returning it. Check segment counts server-side for SMS optimisation.
+
+## Fallback Behaviour
+
+- On timeout, throttling, or invalid output, return a structured error with a user-readable message. Retry at most once for transient errors.
+- Never block manual compose, send, or the original text when AI is unavailable.
+
+## Logging Reminder
+
+- Log metadata only (feature, model ID, latency, token counts, outcome). Do not log prompts, conversation text, or generated messages.

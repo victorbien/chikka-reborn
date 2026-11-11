@@ -265,7 +265,7 @@ class CountryCapability:
 
 | Field | Value | Notes |
 |---|---|---|
-| `outbound_enabled` | `true` | Outbound SMS supported |
+| `outbound_enabled` | **requires verification** | ⚠ Disabled in seed data until confirmed with the provider |
 | `inbound_enabled` | **requires verification** | ⚠ Depends on Twilio PH routing and carrier agreements |
 | `alphanumeric_sender_id` | `false` | Not universally supported by PH carriers |
 | `requires_registered_sender` | `true` | A2P sender registration required |

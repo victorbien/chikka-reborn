@@ -28,8 +28,8 @@ Phases 0–6. Each phase's criteria must be signed off by the engineering lead b
 | AC-0-004 | Backend hosting platform decision recorded (OD-003 resolved) |
 | AC-0-005 | Supabase region decision recorded (OD-008 resolved) |
 | AC-0-006 | `frontend/` scaffold: `npm run build` exits 0 with no errors |
-| AC-0-007 | `backend/` scaffold: `uvicorn main:app` starts with no errors |
-| AC-0-008 | `GET /health` returns `{ "status": "healthy" }` |
+| AC-0-007 | `backend/` scaffold: `uvicorn app.main:app` starts with no errors |
+| AC-0-008 | `GET /api/v1/health` (and `/healthz`) returns `{ "status": "ok", ... }` |
 | AC-0-009 | CI pipeline runs on test PR; all checks pass |
 | AC-0-010 | Staging frontend URL accessible and returns the app shell |
 | AC-0-011 | `.env.example` files exist for frontend and backend with all required variables documented |

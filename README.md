@@ -112,9 +112,9 @@ chikka-reborn/
 │       ├── development-principles.md # Coding and architecture standards
 │       ├── sms-guidelines.md         # SMS implementation rules
 │       └── ai-guidelines.md         # AI feature rules
-├── frontend/                         # React application (Phase 2+)
-├── backend/                          # FastAPI application (Phase 2+)
-└── supabase/                         # Supabase migrations and config (Phase 2+)
+├── frontend/                         # React application (app shell + design system)
+├── backend/                          # FastAPI application (foundation)
+└── supabase/                         # Migrations, seed, SQL tests, database tools
 ```
 
 ---
@@ -155,26 +155,86 @@ The AI assistant (powered by Amazon Bedrock) supports smart replies, translation
 
 ## Getting Started
 
-> Application code has not been written yet. This document will be updated as development progresses.
+> Built so far: the foundation (FastAPI backend, React app shell, design system, database schema) and **Module A, authentication and user management**: registration, email verification, sign-in with lockout, sign-out, password reset, sessions, profile setup and editing, profile photo, presence, mobile number verification (simulation) and account deletion. See [docs/api/authentication-api.md](docs/api/authentication-api.md) and the implementation status in [docs/product/frs/module-a-auth.md](docs/product/frs/module-a-auth.md).
 
 See [docs/roadmap.md](docs/roadmap.md) for the planned development sequence.
+
+### Quick start (Windows PowerShell)
+
+```powershell
+scripts\setup.ps1            # venv, dependencies, copies .env.example files
+scripts\dev-backend.ps1      # http://localhost:8000  (docs at /docs)
+scripts\dev-frontend.ps1     # http://localhost:5173  (second terminal)
+scripts\check.ps1            # lint, format, types, tests, build for both apps
+scripts\e2e-local.ps1        # real processes end to end: PGlite, fake Supabase, API, frontend client
+```
+
+Sign-in needs Supabase Auth: set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET` (and `SUPABASE_SERVICE_ROLE_KEY` for photos and account deletion) in `backend/.env`, and use the email templates in `supabase/templates/` so links come back to the app. Mobile verification runs in simulation: no text message is sent and the code appears in a panel labelled SIMULATED.
+
+Full guide: [docs/deployment/local-development.md](docs/deployment/local-development.md). Per-app guides: [backend/README.md](backend/README.md), [frontend/README.md](frontend/README.md).
+
+### Environment variables
+
+Copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env.local`. Everything is optional for a first start. Reference: [docs/deployment/environment-configuration.md](docs/deployment/environment-configuration.md). SMS defaults to `SMS_PROVIDER_MODE=mock` (simulation); `live` is refused unless `SMS_LIVE_CONFIRMED=true`.
+
+### Frontend
+
+Requires Node.js 22.19+ (Vite 8 and Vitest 5 declare this; 22.17 builds and tests pass but npm warns).
+
+```powershell
+cd frontend
+npm ci
+npm run dev         # http://localhost:5173
+npm run lint
+npm run test        # vitest --run
+npm run build       # tsc --noEmit + vite build
+```
+
+The selected display mode is stored in `localStorage` (`chikka.displayMode`). The frontend holds no provider credentials; only `VITE_`-prefixed public values.
+
+### Backend
+
+Requires Python 3.12.
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+copy .env.example .env
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
+.\.venv\Scripts\python.exe -m pytest
+```
+### Database (no Docker needed for a quick check)
+
+Requires Node.js 20+. This applies all migrations, the development seed and the SQL tests to a throwaway in-process PostgreSQL. It sends nothing anywhere.
+
+```powershell
+cd supabase\tools
+npm ci
+npm test            # migrations + SQL tests
+npm run seed        # migrations + fictional development data
+```
+
+For local Supabase, hosted staging and production steps, see [docs/database/database-setup-guide.md](docs/database/database-setup-guide.md). Simulation is the default SMS mode; nothing in the database setup enables live sending.
 
 ---
 
 ## Documentation Index
 
-| Document | Path |
+Canonical documentation lives in these folders:
+
+| Area | Path |
 |---|---|
-| Product Requirements | [docs/prd.md](docs/prd.md) |
-| Functional Requirements | [docs/frs.md](docs/frs.md) |
-| Non-Functional Requirements | [docs/nfrs.md](docs/nfrs.md) |
-| Architecture | [docs/architecture.md](docs/architecture.md) |
-| Database Design | [docs/database-design.md](docs/database-design.md) |
-| API Design | [docs/api-design.md](docs/api-design.md) |
-| Testing Strategy | [docs/testing-strategy.md](docs/testing-strategy.md) |
-| Deployment Strategy | [docs/deployment-strategy.md](docs/deployment-strategy.md) |
-| Roadmap | [docs/roadmap.md](docs/roadmap.md) |
-| Risks & Dependencies | [docs/risks-and-dependencies.md](docs/risks-and-dependencies.md) |
+| Product (vision, requirements, features, roadmap) | [docs/product/](docs/product/) |
+| Architecture and decisions | [docs/architecture/](docs/architecture/) |
+| UI/UX and screens | [docs/design/](docs/design/) |
+| API reference | [docs/api/](docs/api/) |
+| Database, migrations, RLS | [docs/database/](docs/database/) |
+| Quality and testing | [docs/quality/](docs/quality/) |
+| Deployment and operations | [docs/deployment/](docs/deployment/) |
+| Project management (risks, backlog, decision log) | [docs/project-management/](docs/project-management/) |
+
+The ten older single-file documents directly under `docs/` (`prd.md`, `frs.md`, and so on) are marked SUPERSEDED and kept for history only.
 
 ---
 

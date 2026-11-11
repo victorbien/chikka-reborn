@@ -93,25 +93,22 @@ cd backend
 python -m venv .venv
 .venv\Scripts\activate    # Windows PowerShell
 
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies (runtime + test and lint tools)
+pip install -r requirements-dev.txt
 
 # Copy environment template
-copy .env.example .env.local
+copy .env.example .env
 ```
 
-Edit `backend/.env.local`:
+Edit `backend/.env` (all optional for a first start; see `backend/.env.example`):
 ```env
 # Supabase (use local Supabase values from step 3, or shared dev project)
 SUPABASE_URL=http://localhost:54321
-SUPABASE_SERVICE_ROLE_KEY=<service_role key from supabase start>
 SUPABASE_JWT_SECRET=<JWT secret from supabase start>
+DATABASE_URL=postgresql://postgres:postgres@localhost:54322/postgres
 
 # SMS — always simulation for local development
 SMS_PROVIDER_MODE=mock
-
-# AI — no Bedrock calls locally; uses MockAiProvider
-BEDROCK_MODEL_ID=
 
 # App
 LOG_LEVEL=DEBUG
@@ -119,14 +116,18 @@ LOG_LEVEL=DEBUG
 
 Start the backend:
 ```powershell
-uvicorn main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8000
 ```
 
 Verify:
 ```powershell
-curl http://localhost:8000/health
-# {"status":"healthy","database":"connected","sms_provider":"mock",...}
+curl http://localhost:8000/api/v1/health
+# {"status":"ok","service":"chikka-reborn-api","sms_mode":"simulation","database":"ok",...}
 ```
+
+API documentation: http://localhost:8000/docs (disabled when `APP_ENV=production`).
+
+Without `DATABASE_URL` the app still starts and reports `"database":"not_configured"`. Without `SUPABASE_JWT_SECRET`, protected routes return 503 (authentication fails closed).
 
 Backend auto-reloads on file changes via `--reload`.
 
@@ -163,6 +164,17 @@ App available at: `http://localhost:5173`
 
 ---
 
+### Shortcut scripts
+
+```powershell
+scripts\setup.ps1          # venv, dependencies, copies .env.example files
+scripts\dev-backend.ps1    # uvicorn with reload on :8000
+scripts\dev-frontend.ps1   # Vite on :5173
+scripts\check.ps1          # lint, format, types, tests and build for both apps
+```
+
+---
+
 ## 6. Running Tests Locally
 
 ### Backend Tests
@@ -172,23 +184,35 @@ cd backend
 # All tests
 pytest
 
-# Specific module
-pytest tests/api/test_sms_routes.py
+# Specific file
+pytest tests/integration/test_health.py
 
 # With coverage
-pytest --cov=. --cov-report=html
+pytest --cov=app --cov-report=html
 # Open htmlcov/index.html in browser
 ```
+
+### Backend Flow Tests (real schema, no Docker)
+
+`tests/flows/` runs every auth and profile flow against PGlite with all migrations applied (started automatically from `supabase/tools/serve-db.mjs`) and a fake Supabase Auth/Storage that the real provider code talks to. They need Node.js and `npm ci` in `supabase/tools`; without them they are skipped.
+
+### Local End-to-End Check
+
+```powershell
+scripts\e2e-local.ps1
+```
+
+Starts PGlite, the fake Supabase over HTTP, the backend on port 8010, checks the CORS preflight, and runs `frontend/src/test/live` (the real frontend API client and session store) against it. It also checks the API log for passwords and tokens. Everything stays on 127.0.0.1.
 
 ### Frontend Tests
 ```powershell
 cd frontend
 
 # All tests (single run — not watch mode)
-npm run test -- --run
+npm run test
 
-# With coverage
-npm run test -- --run --coverage
+# With coverage (floor: 70% for features)
+npm run test:coverage
 ```
 
 ### E2E Tests (requires staging, not local)
@@ -234,11 +258,11 @@ This triggers the full inbound SMS processing flow including Realtime push to th
 
 4. Run tests
    cd backend && pytest
-   cd frontend && npm run test -- --run
+   cd frontend && npm run test
 
-5. Lint and type check
-   cd backend && ruff check . && mypy .
-   cd frontend && npm run lint && npm run type-check
+5. Lint and type check (or run everything: scripts\check.ps1)
+   cd backend && ruff check . && ruff format --check . && mypy
+   cd frontend && npm run lint && npm run format:check && npm run typecheck
 
 6. Commit
    git add <specific files>
@@ -259,6 +283,8 @@ This triggers the full inbound SMS processing flow including Realtime push to th
 | Frontend cannot connect to backend | `VITE_API_BASE_URL` wrong | Set to `http://localhost:8000` |
 | Realtime messages not arriving | Realtime not enabled on table | Run `supabase db push` to apply publications |
 | `ModuleNotFoundError` in backend | venv not activated | `.venv\Scripts\activate` |
+| Browser shows a CORS error | Frontend origin not in `CORS_ORIGINS` | Add it (explicit origins only; `*` is rejected) |
+| Backend refuses to start with `SMS_LIVE_CONFIRMED` error | `SMS_PROVIDER_MODE=live` without operator confirmation | Use `mock` locally |
 | Port 5173 already in use | Another Vite server running | `npx kill-port 5173` then `npm run dev` |
 
 ---

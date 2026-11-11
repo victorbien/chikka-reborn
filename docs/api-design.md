@@ -1,5 +1,7 @@
 # API Design
 
+> **SUPERSEDED (November 2026).** Retained for history. The canonical version is in docs/api/ (api-overview and module files). Requirement IDs here use the older scheme (e.g. FR-A-001); see the 'Was:' fields in docs/product/functional-requirements.md for the mapping.
+
 **Project:** Chikka Reborn  
 **Version:** 1.0  
 **Status:** Draft  

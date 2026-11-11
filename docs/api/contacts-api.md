@@ -133,7 +133,7 @@ Get a single contact record.
 
 Update a contact's display name, group, or status.  
 **Auth:** Required (must own the contact)  
-**FR:** FR-CONTACTS-004, FR-CONTACTS-008
+**FR:** FR-CONTACTS-004, FR-CONTACTS-006
 
 **Request:**
 ```json

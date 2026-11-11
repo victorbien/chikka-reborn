@@ -23,7 +23,7 @@ Documents all Chikka-to-Chikka real-time messaging endpoints — conversations a
 
 Get all conversations for the authenticated user.  
 **Auth:** Required  
-**FR:** FR-MSG-004, FR-MSG-011
+**FR:** FR-MSG-004
 
 **Query params:** `page`, `page_size`
 
@@ -162,7 +162,7 @@ Note: Deleted messages return with `body: null` and `deleted_at` set — not omi
 
 Send a Chikka message in a conversation.  
 **Auth:** Required (must be a participant)  
-**FR:** FR-MSG-001, FR-MSG-007
+**FR:** FR-MSG-001, FR-MSG-006
 
 **Request:**
 ```json

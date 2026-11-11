@@ -1,0 +1,13 @@
+fastapi==0.162.4
+uvicorn[standard]==0.54.0
+pydantic==2.14.3
+pydantic-settings==2.16.2
+email-validator==2.3.0
+sqlalchemy[asyncio]==2.1.8
+asyncpg==0.32.0
+pyjwt==2.15.1
+httpx==0.28.1
+python-multipart==0.0.33
+pillow==13.0.0
+phonenumbers==9.0.43
+tzdata==2026.6

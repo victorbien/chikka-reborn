@@ -123,7 +123,7 @@ All screens across Modern Mode, Classic Mode, and Admin Dashboard. This is the a
 ### SCR-MAIN-001 — Conversation List
 **Route:** `/app/messages`  
 **Phase:** 1  
-**FR:** FR-MSG-004, FR-MSG-011  
+**FR:** FR-MSG-004  
 
 **Description:** List of all conversations. Entry point after login.
 
@@ -158,7 +158,7 @@ All screens across Modern Mode, Classic Mode, and Admin Dashboard. This is the a
 ### SCR-MAIN-003 — Contacts / Buddy List
 **Route:** `/app/contacts`  
 **Phase:** 1  
-**FR:** FR-CONTACTS-001–004, FR-CONTACTS-011  
+**FR:** FR-CONTACTS-001–004  
 
 **Description:** List of all contacts — Chikka users and SMS contacts. Search and add.
 

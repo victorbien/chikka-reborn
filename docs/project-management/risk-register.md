@@ -150,7 +150,7 @@ All phases. All risk categories.
 - Inject user content as structured XML-tagged data, not raw string concatenation.
 - Static system prompts define model role and prohibit instruction overriding.
 - All AI output reviewed by user before sending — user is the last line of defence.
-- Test: UT-AI-007 (prompt injection).
+- Test: SEC-INPUT-007 (prompt injection) in `docs/quality/security-test-plan.md`.
 
 **Owner:** Engineering  
 **Status:** ⬜ Open — address in Phase 3 prompt design
