@@ -192,12 +192,27 @@ pytest --cov=app --cov-report=html
 # Open htmlcov/index.html in browser
 ```
 
+### Backend Flow Tests (real schema, no Docker)
+
+`tests/flows/` runs every auth and profile flow against PGlite with all migrations applied (started automatically from `supabase/tools/serve-db.mjs`) and a fake Supabase Auth/Storage that the real provider code talks to. They need Node.js and `npm ci` in `supabase/tools`; without them they are skipped.
+
+### Local End-to-End Check
+
+```powershell
+scripts\e2e-local.ps1
+```
+
+Starts PGlite, the fake Supabase over HTTP, the backend on port 8010, checks the CORS preflight, and runs `frontend/src/test/live` (the real frontend API client and session store) against it. It also checks the API log for passwords and tokens. Everything stays on 127.0.0.1.
+
 ### Frontend Tests
 ```powershell
 cd frontend
 
 # All tests (single run — not watch mode)
 npm run test
+
+# With coverage (floor: 70% for features)
+npm run test:coverage
 ```
 
 ### E2E Tests (requires staging, not local)

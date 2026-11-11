@@ -28,6 +28,20 @@ class Settings(BaseSettings):
     database_url: str | None = None
     supabase_url: str | None = None
     supabase_jwt_secret: SecretStr | None = None
+    # Public anon key: identifies the project to GoTrue for user-level calls.
+    supabase_anon_key: SecretStr | None = None
+    # Backend-only. Used for admin calls (ban user) and Storage writes. Never sent to the browser.
+    supabase_service_role_key: SecretStr | None = None
+    avatar_bucket: str = "avatars"
+
+    # Keys the HMACs for rate-limit subjects and OTP hashes. Required outside dev/test.
+    app_secret_key: SecretStr | None = None
+
+    # Where email links point (the SPA) and what the refresh cookie may do.
+    frontend_base_url: str = "http://localhost:5173"
+    cookie_secure: bool | None = None
+    terms_version: str = "2026-11-01"
+    privacy_version: str = "2026-11-01"
 
     db_pool_size: int = Field(default=10, ge=1, le=50)
     db_max_overflow: int = Field(default=20, ge=0, le=100)
@@ -49,7 +63,16 @@ class Settings(BaseSettings):
             raise ValueError("CORS_ORIGINS must list explicit origins; '*' is not allowed")
         return value
 
-    @field_validator("database_url", "supabase_url", "supabase_jwt_secret", mode="before")
+    @field_validator(
+        "database_url",
+        "supabase_url",
+        "supabase_jwt_secret",
+        "supabase_anon_key",
+        "supabase_service_role_key",
+        "app_secret_key",
+        "cookie_secure",
+        mode="before",
+    )
     @classmethod
     def _blank_is_unset(cls, value: object) -> object:
         # A copied .env.example leaves blank values; treat them as not configured.
@@ -75,6 +98,21 @@ class Settings(BaseSettings):
         if self.sms_provider_mode == "live" and not self.sms_live_confirmed:
             raise ValueError("SMS_PROVIDER_MODE=live requires SMS_LIVE_CONFIRMED=true")
         return self
+
+    @model_validator(mode="after")
+    def _secret_key_required_outside_dev(self) -> Self:
+        if self.app_env in ("staging", "production"):
+            key = self.app_secret_key
+            if key is None or len(key.get_secret_value()) < 32:
+                raise ValueError("APP_SECRET_KEY (at least 32 characters) is required")
+        return self
+
+    @property
+    def secure_cookies(self) -> bool:
+        """Secure cookies everywhere except local http development, unless overridden."""
+        if self.cookie_secure is not None:
+            return self.cookie_secure
+        return self.app_env in ("staging", "production")
 
     @property
     def sms_mode(self) -> Literal["simulation", "live"]:

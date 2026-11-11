@@ -155,7 +155,7 @@ The AI assistant (powered by Amazon Bedrock) supports smart replies, translation
 
 ## Getting Started
 
-> The foundation is in place: a FastAPI backend (health, docs, config, logging, error envelope, JWT dependency, database connection), a React app shell (routing, layouts, API client, query layer) and the design system. No business features exist yet. The database schema, migrations, seed and SQL tests are in `supabase/`.
+> Built so far: the foundation (FastAPI backend, React app shell, design system, database schema) and **Module A, authentication and user management**: registration, email verification, sign-in with lockout, sign-out, password reset, sessions, profile setup and editing, profile photo, presence, mobile number verification (simulation) and account deletion. See [docs/api/authentication-api.md](docs/api/authentication-api.md) and the implementation status in [docs/product/frs/module-a-auth.md](docs/product/frs/module-a-auth.md).
 
 See [docs/roadmap.md](docs/roadmap.md) for the planned development sequence.
 
@@ -166,7 +166,10 @@ scripts\setup.ps1            # venv, dependencies, copies .env.example files
 scripts\dev-backend.ps1      # http://localhost:8000  (docs at /docs)
 scripts\dev-frontend.ps1     # http://localhost:5173  (second terminal)
 scripts\check.ps1            # lint, format, types, tests, build for both apps
+scripts\e2e-local.ps1        # real processes end to end: PGlite, fake Supabase, API, frontend client
 ```
+
+Sign-in needs Supabase Auth: set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET` (and `SUPABASE_SERVICE_ROLE_KEY` for photos and account deletion) in `backend/.env`, and use the email templates in `supabase/templates/` so links come back to the app. Mobile verification runs in simulation: no text message is sent and the code appears in a panel labelled SIMULATED.
 
 Full guide: [docs/deployment/local-development.md](docs/deployment/local-development.md). Per-app guides: [backend/README.md](backend/README.md), [frontend/README.md](frontend/README.md).
 

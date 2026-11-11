@@ -1,6 +1,6 @@
 # Chikka Reborn backend
 
-FastAPI foundation. No business features yet (Phase 1 adds auth, profiles and chat).
+FastAPI backend. Implemented: foundation and Module A (authentication and user management). API reference: `docs/api/authentication-api.md`.
 
 ## Setup
 
@@ -36,6 +36,8 @@ The app starts with an empty `.env`: without `DATABASE_URL` it reports the datab
 .\.venv\Scripts\python.exe -m pytest --cov=app
 ```
 
+`tests/flows/` needs Node.js and `npm ci` in `supabase/tools` (PGlite database server); otherwise those tests are skipped. `tests/support/fake_supabase.py` is a test double of the Supabase Auth and Storage endpoints and is never imported by `app/`.
+
 ## Layout
 
 ```text
@@ -47,8 +49,8 @@ app/
   schemas/         Pydantic request/response models
   services/        business rules
   repositories/    the only layer that touches SQLAlchemy
-  modules/         feature modules (empty until Phase 1)
-  integrations/    SMS and AI provider interfaces (empty until Phase 2)
+  modules/         audit, rate_limits, profiles, auth (router, schemas, service, repository, models)
+  integrations/    AuthProvider (Supabase Auth), StorageProvider, OtpDelivery (simulated/live)
   main.py          application factory
 ```
 

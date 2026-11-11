@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -27,6 +28,12 @@ class Database:
     def session(self) -> AsyncSession:
         return self._session_factory()
 
+    @asynccontextmanager
+    async def transaction(self) -> AsyncIterator[AsyncSession]:
+        """One unit of work: commits on success, rolls back on any exception."""
+        async with self._session_factory() as session, session.begin():
+            yield session
+
     async def dispose(self) -> None:
         await self._engine.dispose()
 
@@ -38,6 +45,16 @@ def build_database(
     if not url:
         return None
     return Database(url, pool_size=pool_size, max_overflow=max_overflow)
+
+
+def require_database(database: Database | None) -> Database:
+    """Auth and profile operations fail closed without a database (FR-AUTH-006)."""
+    if database is None:
+        raise ServiceUnavailableError(
+            "The service is temporarily unavailable.",
+            details={"reason": "database_not_configured"},
+        )
+    return database
 
 
 async def session_scope(database: Database | None) -> AsyncIterator[AsyncSession]:

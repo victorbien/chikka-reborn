@@ -17,10 +17,20 @@ class AppError(Exception):
     status_code = 500
     code = "internal_error"
 
-    def __init__(self, message: str, *, details: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str | None = None,
+        details: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         super().__init__(message)
         self.message = message
+        if code is not None:
+            self.code = code
         self.details = details or {}
+        self.headers = headers or {}
 
 
 class AuthenticationError(AppError):
@@ -36,6 +46,34 @@ class PermissionDeniedError(AppError):
 class NotFoundError(AppError):
     status_code = 404
     code = "not_found"
+
+
+class BadRequestError(AppError):
+    status_code = 400
+    code = "bad_request"
+
+
+class ConflictError(AppError):
+    status_code = 409
+    code = "conflict"
+
+
+class UnprocessableError(AppError):
+    status_code = 422
+    code = "validation_error"
+
+
+class RateLimitedError(AppError):
+    status_code = 429
+    code = "rate_limited"
+
+    def __init__(self, retry_after: int, message: str | None = None) -> None:
+        seconds = max(1, int(retry_after))
+        super().__init__(
+            message or "Too many attempts. Please try again later.",
+            details={"retry_after_seconds": seconds},
+            headers={"Retry-After": str(seconds)},
+        )
 
 
 class ServiceUnavailableError(AppError):
@@ -65,10 +103,12 @@ def error_response(
 async def _handle_app_error(_request: Request, exc: Exception) -> JSONResponse:
     if not isinstance(exc, AppError):
         raise exc
-    headers = {"WWW-Authenticate": "Bearer"} if exc.status_code == 401 else None
+    headers = dict(exc.headers)
+    if exc.status_code == 401:
+        headers.setdefault("WWW-Authenticate", "Bearer")
     if exc.status_code >= 500:
         logger.error("application error", extra={"error_code": exc.code})
-    return error_response(exc.status_code, exc.code, exc.message, exc.details, headers)
+    return error_response(exc.status_code, exc.code, exc.message, exc.details, headers or None)
 
 
 async def _handle_http_exception(_request: Request, exc: Exception) -> JSONResponse:

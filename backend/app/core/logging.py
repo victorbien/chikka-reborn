@@ -37,8 +37,27 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(payload, default=str)
 
 
+class _StdoutHandler(logging.StreamHandler):  # type: ignore[type-arg]
+    """Writes to whatever sys.stdout is at emit time, not when logging was configured.
+
+    A handler that keeps a reference to an old stream fails once that stream is closed, and
+    logging's error report then prints the caller's source lines to stderr.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(sys.stdout)
+
+    @property
+    def stream(self) -> Any:
+        return sys.stdout
+
+    @stream.setter
+    def stream(self, _value: Any) -> None:
+        pass
+
+
 def configure_logging(level: str) -> None:
-    handler = logging.StreamHandler(sys.stdout)
+    handler = _StdoutHandler()
     handler.setFormatter(JsonFormatter())
     root = logging.getLogger()
     root.handlers = [handler]

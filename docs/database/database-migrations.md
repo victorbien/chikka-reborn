@@ -45,6 +45,7 @@ Defines how Chikka Reborn database changes are written, ordered, applied and, wh
 | `20261110000013_reference_data` | System settings, mock (active) and Twilio (inactive) provider rows, six UNVERIFIED country rows | platform configuration |
 | `20261110000014_lockdown_private_functions` | Explicit `EXECUTE` grants for the `private` schema | all |
 | `20261110000015_rate_limit_counters` | `rate_limit_counters` | foundation |
+| `20261111000001_avatars_bucket` | private Storage bucket `avatars` (WebP only, 512 KB); no client policies, backend writes with the service role; skipped where `storage` is absent | 20261110000002 |
 
 Development seed: `supabase/seed/01_dev_seed.sql`. Test support and tests: `supabase/tests/`.
 

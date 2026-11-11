@@ -1,72 +1,59 @@
-import { QueryClient } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
-import { createMemoryRouter, RouterProvider } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { AppProviders } from "@/app/providers";
-import { appRoutes } from "@/routes";
-import type { HealthStatus } from "@/types/api";
+import { screen, waitFor } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { fail, makeProfile, mockApi, signedInRoutes } from "@/test/api-mock";
+import { renderApp } from "@/test/render-app";
 
-const HEALTH: HealthStatus = {
-  status: "ok",
-  service: "chikka-reborn-api",
-  version: "0.1.0",
-  environment: "test",
-  sms_mode: "simulation",
-  database: "not_configured",
-  request_id: "req-1",
+const signedOut = {
+  "POST /api/v1/auth/refresh": fail(401, "not_authenticated", "Please sign in."),
 };
 
-function renderAt(path: string) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const router = createMemoryRouter(appRoutes, { initialEntries: [path] });
-  return render(
-    <AppProviders queryClient={queryClient}>
-      <RouterProvider router={router} />
-    </AppProviders>,
-  );
-}
-
-function stubFetch(response: Response | Error) {
-  const fetchMock = vi.fn(() =>
-    response instanceof Error ? Promise.reject(response) : Promise.resolve(response),
-  );
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
-}
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
-
-describe("application routes", () => {
-  it("shows server status from the health endpoint on the home page", async () => {
-    stubFetch(new Response(JSON.stringify(HEALTH)));
-    renderAt("/");
-    expect(await screen.findByText("Simulation (no real SMS)")).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: "Main" })).toBeInTheDocument();
+describe("route guards", () => {
+  it("sends visitors to sign in and remembers where they were going", async () => {
+    mockApi(signedOut);
+    const { router } = renderApp("/settings/profile");
+    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/auth/sign-in");
+    expect(router.state.location.state).toEqual({ from: "/settings/profile" });
   });
 
-  it("shows a readable error with a retry when the server is unreachable", async () => {
-    stubFetch(new TypeError("Failed to fetch"));
-    renderAt("/");
-    expect(await screen.findByRole("alert")).toHaveTextContent("You are offline");
+  it("shows the app shell with server status to an onboarded user", async () => {
+    mockApi(signedInRoutes());
+    renderApp("/");
+    expect(await screen.findByText("Simulation (no real SMS)")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Main" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+  });
+
+  it("sends users without a finished profile to setup", async () => {
+    mockApi(signedInRoutes(makeProfile({ onboarding_completed: false, username: null })));
+    const { router } = renderApp("/");
+    expect(await screen.findByRole("heading", { name: "Set up your profile" })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/onboarding");
+  });
+
+  it("sends signed-in users away from the sign-in page", async () => {
+    mockApi(signedInRoutes());
+    const { router } = renderApp("/auth/sign-in");
+    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
+  });
+
+  it("shows a readable error when the profile cannot load", async () => {
+    mockApi({ ...signedInRoutes(), "GET /api/v1/users/me": fail(503, "service_unavailable") });
+    renderApp("/");
+    expect(await screen.findByRole("alert")).toHaveTextContent("The server had a problem");
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
 
-  it("renders the auth layout without main navigation", () => {
-    renderAt("/auth/sign-in");
-    expect(screen.getByText("Sign-in is not available yet")).toBeInTheDocument();
-    expect(screen.queryByRole("navigation", { name: "Main" })).not.toBeInTheDocument();
-  });
-
-  it("renders the style guide inside the app layout", () => {
-    renderAt("/style-guide");
-    expect(screen.getByRole("navigation", { name: "Main" })).toBeInTheDocument();
+  it("keeps the style guide public", async () => {
+    mockApi(signedOut);
+    renderApp("/style-guide");
+    expect(await screen.findByRole("link", { name: "Sign in" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1, name: "Chikka Reborn" })).toBeInTheDocument();
   });
 
-  it("renders a not-found page for unknown routes", () => {
-    renderAt("/nope");
-    expect(screen.getByText("Page not found")).toBeInTheDocument();
+  it("renders a not-found page for unknown routes", async () => {
+    mockApi(signedOut);
+    renderApp("/nope");
+    expect(await screen.findByText("Page not found")).toBeInTheDocument();
   });
 });

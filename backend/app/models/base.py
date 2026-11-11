@@ -1,4 +1,7 @@
-from sqlalchemy import MetaData
+from datetime import datetime
+from typing import Any, ClassVar
+
+from sqlalchemy import DateTime, MetaData
 from sqlalchemy.orm import DeclarativeBase
 
 # Constraint names match the supabase/migrations conventions (pk_/fk_/uq_/ck_/idx_).
@@ -15,3 +18,4 @@ class Base(DeclarativeBase):
     """Declarative base for ORM models. The schema itself is owned by Supabase migrations."""
 
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
+    type_annotation_map: ClassVar[dict[Any, Any]] = {datetime: DateTime(timezone=True)}

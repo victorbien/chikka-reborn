@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.container import Providers, build_providers
 from app.api.v1 import health
 from app.api.v1.router import api_router
 from app.core.config import Settings, get_settings
@@ -18,9 +19,11 @@ logger = logging.getLogger(__name__)
 API_V1_PREFIX = "/api/v1"
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
-    """Application factory. Tests pass their own Settings; production uses the environment."""
+def create_app(settings: Settings | None = None, providers: Providers | None = None) -> FastAPI:
+    """Application factory. Tests pass their own Settings and fake providers."""
     settings = settings or get_settings()
+    owns_providers = providers is None
+    app_providers = providers or build_providers(settings)
     configure_logging(settings.log_level)
 
     @asynccontextmanager
@@ -43,6 +46,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         finally:
             if app.state.database is not None:
                 await app.state.database.dispose()
+            if owns_providers:
+                await app_providers.aclose()
             logger.info("application stopped")
 
     app = FastAPI(
@@ -61,6 +66,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Dependencies read settings from here so tests can override a single object.
     app.dependency_overrides[get_settings] = lambda: settings
     app.state.database = None
+    app.state.providers = app_providers
 
     register_middleware(app, settings)
     register_exception_handlers(app)

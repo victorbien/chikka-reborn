@@ -81,6 +81,22 @@ describe("ApiClient", () => {
     expect(error).toMatchObject({ kind: "network", code: "network_error" });
   });
 
+  it("sends cookies for the refresh flow and handles 204", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 204 }));
+    await expect(makeClient(fetchImpl).delete("/x")).resolves.toBeUndefined();
+    expect(fetchImpl.mock.calls[0]?.[1]?.credentials).toBe("include");
+  });
+
+  it("sends FormData as-is so the browser sets the multipart boundary", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({}));
+    const form = new FormData();
+    form.append("avatar", new Blob(["x"]), "a.png");
+    await makeClient(fetchImpl).post("/upload", form);
+    const init = fetchImpl.mock.calls[0]?.[1];
+    expect(init?.body).toBe(form);
+    expect((init?.headers as Record<string, string>)["Content-Type"]).toBeUndefined();
+  });
+
   it("flags a successful response with an unreadable body", async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response("not json"));
     const error = await makeClient(fetchImpl)

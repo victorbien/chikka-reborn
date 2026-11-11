@@ -32,6 +32,17 @@ create table if not exists auth.users (
     updated_at          timestamptz not null default now()
 );
 
+-- Sessions table of GoTrue (only the columns the backend reads). Real Supabase owns this table.
+create table if not exists auth.sessions (
+    id          uuid primary key default gen_random_uuid(),
+    user_id     uuid not null references auth.users (id) on delete cascade,
+    created_at  timestamptz not null default now(),
+    updated_at  timestamptz not null default now(),
+    not_after   timestamptz,
+    user_agent  text,
+    ip          inet
+);
+
 -- Same resolution order as Supabase: legacy claim setting first, then the claims JSON.
 create or replace function auth.uid()
 returns uuid

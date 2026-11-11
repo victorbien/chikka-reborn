@@ -273,3 +273,27 @@ Part of the [Functional Requirements Specification](../functional-requirements.m
 | Error scenarios | Reserved or offensive username: rejected. Save failure: progress retained. |
 | Dependencies | FR-AUTH-002, FR-PRIVACY-001. |
 | Acceptance criteria | AC1 Username is 3 to 20 characters of letters, digits and underscore, unique case-insensitively. AC2 Users cannot use messaging until username exists. AC3 Default visibility is "contacts only". AC4 Onboarding is keyboard accessible. |
+
+---
+
+## Implementation Status (Implementation 02, November 2026)
+
+Design: ADL-019. API: [authentication-api.md](../../api/authentication-api.md).
+
+| Requirement | Status | Notes and deviations |
+|---|---|---|
+| FR-AUTH-001 Registration | Implemented | Neutral response for duplicates. **Deviation:** alternative A ("account already exists" email) is not sent; Supabase Auth returns an obfuscated user and sends nothing. Needs a custom mail hook to add. |
+| FR-AUTH-002 Email verification | Implemented | Token-hash links, 24 h, single use, resend invalidates earlier links. Unverified users cannot sign in (stricter than AC2's "sign in but see a verification screen"); the sign-in page links to resend. |
+| FR-AUTH-003 Social login | **Not implemented** | Not in Implementation 02 scope. Needs a backend authorisation-code callback (ADL-011). |
+| FR-AUTH-004 Login | Implemented | Identical answers for wrong email or password. 7-day sliding refresh cookie. Presence starts with the first heartbeat. |
+| FR-AUTH-005 Password reset | Implemented | 1 h single-use link; all sessions ended. **Not verified:** AC4 "password changed" email depends on Supabase's notification setting, which is not configured or tested here. |
+| FR-AUTH-006 Lockout | Implemented | 5 consecutive failures per email, 15 min. Additional per-IP limit (20 / 15 min). Lockouts are audited. Counter store unavailable fails closed (503). |
+| FR-AUTH-007 Profile editing | Implemented | HTML stripped server-side. Last write wins. No content filter for display names yet (alternative B). |
+| FR-AUTH-008 Mobile OTP | Implemented (simulation) | Backend-owned OTP, keyed hash, 10 min, 5 attempts, 3 sends / 30 min, records `simulated` mode. **Live delivery is not available** until the Phase 2 `SmsProvider`; it returns 503 and never falls back. Country capability gating (FR-SMS-007) applies when live delivery is built. |
+| FR-AUTH-009 Account deletion | Implemented | Re-auth plus typed DELETE. **Deviation:** personal profile fields are erased immediately rather than "within 30 days", and there is no 7-day reactivation grace (OPEN-04 unresolved). Confirmation email not sent. Consents, ledger and audit rows are kept. |
+| FR-AUTH-010 Logout | Implemented | Local or everywhere; revocation is immediate (session check per request). Offline: local sign-out still completes. |
+| FR-AUTH-011 Profile photo | Implemented | 2 MB, JPEG/PNG/WebP by content, re-encoded to WebP (EXIF removed), private bucket. **Deviation:** no crop step; the server scales to 512 px. Visibility to others depends on Module B (contacts). |
+| FR-AUTH-012 Number management | Implemented | Change and removal need the password; the old number is released only after the new one verifies; audited. |
+| FR-AUTH-013 Presence | Partly implemented | Own status, heartbeat, idle-to-away, invisible-as-offline. **Limitation:** per-process registry; sharing presence with contacts needs Module B and the realtime layer (ADL-013). |
+| FR-AUTH-014 Sessions | Implemented | List, revoke one, revoke others; audited. Shows network prefix instead of approximate location. |
+| FR-AUTH-015 Onboarding | Implemented | Username rules, suggestions on conflict, reserved names. Optional photo is offered in settings rather than as an onboarding step. |

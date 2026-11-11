@@ -49,7 +49,31 @@ def test_live_sms_requires_explicit_confirmation() -> None:
 
 
 def test_docs_are_disabled_in_production() -> None:
-    assert make(app_env="production").docs_enabled is False
+    assert make(app_env="production", app_secret_key="k" * 32).docs_enabled is False
+
+
+def test_secret_key_is_required_outside_development() -> None:
+    for env in ("staging", "production"):
+        with pytest.raises(ValidationError, match="APP_SECRET_KEY"):
+            make(app_env=env)
+        with pytest.raises(ValidationError, match="APP_SECRET_KEY"):
+            make(app_env=env, app_secret_key="too-short")
+
+
+def test_env_example_values_load(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A copied .env.example leaves several values blank; the app must still start.
+    from pathlib import Path
+
+    settings = Settings(_env_file=Path(__file__).parents[2] / ".env.example")  # type: ignore[call-arg]
+    assert settings.cookie_secure is None
+    assert settings.supabase_anon_key is None
+    assert settings.sms_provider_mode == "mock"
+
+
+def test_secure_cookies_default_by_environment() -> None:
+    assert make().secure_cookies is False
+    assert make(app_env="production", app_secret_key="k" * 32).secure_cookies is True
+    assert make(cookie_secure=True).secure_cookies is True
 
 
 def test_secret_is_not_leaked_in_repr() -> None:

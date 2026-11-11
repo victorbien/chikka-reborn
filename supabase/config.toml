@@ -13,3 +13,36 @@ major_version = 15
 enabled = true
 # Development users and sample data. Never point a staging or production project at this.
 sql_paths = ["./seed/*.sql"]
+
+[auth]
+# The SPA origin. Email links point here; the backend (not the browser) confirms tokens.
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+jwt_expiry = 3600
+enable_signup = true
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+minimum_password_length = 8
+password_requirements = "lower_upper_letters_digits"
+
+[auth.email]
+enable_signup = true
+# No session is issued until the address is verified (FR-AUTH-001 AC5).
+enable_confirmations = true
+double_confirm_changes = true
+max_frequency = "60s"
+otp_expiry = 3600
+
+[auth.email.template.confirmation]
+subject = "Confirm your Chikka Reborn email"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Reset your Chikka Reborn password"
+content_path = "./supabase/templates/recovery.html"
+
+# Mobile verification is NOT delegated to Supabase phone auth: that needs an SMS provider
+# configured in Supabase. The backend owns OTP verification behind the OtpDelivery interface.
+[auth.sms]
+enable_signup = false
+enable_confirmations = false

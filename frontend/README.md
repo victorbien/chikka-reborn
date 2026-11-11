@@ -1,6 +1,8 @@
 # Chikka Reborn frontend
 
-React, TypeScript and Vite. Foundation only: app shell, routing, API client and the shared component library. No business features yet.
+React, TypeScript and Vite. Implemented: app shell, shared component library, and Module A screens (register, sign in, forgot and reset password, email verification, profile setup, profile settings with photo, status, mobile number, sessions and account deletion).
+
+The access token is kept in memory only; the refresh token is an httpOnly cookie set by the API, so nothing sensitive is stored in `localStorage`.
 
 ## Setup
 
@@ -36,7 +38,7 @@ npm run build
 src/
   app/          App, providers (theme + TanStack Query)
   components/   ui (primitives), shared (domain components), common, layout, navigation
-  features/     feature folders (system/ today)
+  features/     auth/, profile/, system/ (api, schemas, hooks, components per feature)
   hooks/        reusable hooks (useHealth)
   lib/          env, api client + errors, error handling, query client, display mode
   services/     typed API calls built on the client

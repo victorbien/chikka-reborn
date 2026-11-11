@@ -47,8 +47,14 @@ def register_middleware(app: FastAPI, settings: Settings) -> None:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_credentials=False,
+        allow_credentials=True,  # refresh cookie; origins are explicit, never "*"
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "Idempotency-Key", REQUEST_ID_HEADER],
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "Idempotency-Key",
+            "X-Chikka-CSRF",
+            REQUEST_ID_HEADER,
+        ],
         expose_headers=[REQUEST_ID_HEADER, "Retry-After"],
     )

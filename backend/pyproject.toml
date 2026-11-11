@@ -31,3 +31,6 @@ addopts = "-ra --strict-markers"
 [tool.coverage.run]
 source = ["app"]
 branch = true
+# SQLAlchemy's async layer runs code on greenlets; without this, lines after awaits inside a
+# session are reported as missed even though tests execute them.
+concurrency = ["thread", "greenlet"]

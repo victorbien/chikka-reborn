@@ -271,6 +271,7 @@ ADL-010 to ADL-017 are **Proposed**. They refine or supersede earlier entries on
 | ADL-016 | Resolves ADL-009 |
 | ADL-017 | New; partly resolves OD-003 and OD-008 |
 | ADL-018 | New; implements ADL-011 in the schema; resolves OD-010, OD-012, OD-013 (proposed) |
+| ADL-019 | Implements ADL-011 for Module A; refines how OD-014 is resolved |
 
 ---
 
@@ -633,6 +634,40 @@ The schema had to support internal chat, outbound and inbound SMS, retries, prov
 
 ---
 
+## ADL-019 — Authentication Module Implementation
+
+**Date:** November 2026  
+**Status:** Accepted (implemented in Implementation 02)  
+**Deciders:** Engineering  
+
+### Context
+ADL-011 makes the backend the authorisation authority and keeps tokens out of script-readable storage. Module A needed concrete choices for talking to Supabase Auth, mobile verification, session revocation, presence and photos, and a way to test all of it without a Supabase project or Docker.
+
+### Decision
+1. **Backend-mediated Supabase Auth over REST.** `SupabaseAuthProvider` (behind the `AuthProvider` interface in `integrations/`) calls GoTrue with httpx. No Supabase SDK in the backend or browser.
+2. **Tokens.** The access token is returned in the body and held in SPA memory. The refresh token is an `HttpOnly`, `SameSite=Lax` cookie scoped to `/api/v1/auth`; refresh also requires `X-Chikka-CSRF: 1`.
+3. **Email links carry a token hash to the SPA**, which posts it to the backend (`/auth/verify-email`, `/auth/reset-password/confirm`). Templates live in `supabase/templates/`.
+4. **Immediate revocation.** Every protected request checks that the token's `session_id` still exists in `auth.sessions` and that the profile is usable. Logout, "sign out other devices" and password reset delete those rows.
+5. **Mobile OTP is owned by the backend**, behind `OtpDelivery`: a simulated inbox in mock mode, and a live implementation that fails explicitly until the Phase 2 `SmsProvider` exists. Supabase phone auth is not used.
+6. **Rate limits and lockout** use `rate_limit_counters`, with keyed hashes as subjects. Each counter commits in its own transaction so failed requests still count.
+7. **Presence** keeps heartbeats in a per-process registry and persists only `last_seen_at`.
+8. **Profile photos** are decoded and re-encoded to WebP by the backend (Pillow), stored in a private bucket, and served through one-hour signed URLs.
+9. **Testing without Supabase.** `supabase/tools/serve-db.mjs` serves PGlite (all migrations) over the PostgreSQL protocol. `backend/tests/support/fake_supabase.py` implements the GoTrue and Storage endpoints the backend uses, so tests exercise the real provider code.
+
+### Options Considered
+- Supabase JS in the browser with `localStorage` sessions: rejected by ADL-011 and OD-014.
+- Supabase phone auth for OTP: needs a provider configured inside Supabase and hides the mode, so simulated and real verifications would be indistinguishable.
+- Relying on JWT expiry for logout: leaves revoked sessions usable for up to an hour (fails FR-AUTH-010 AC2).
+- Redis for rate limits and presence: an extra datastore with no ADR; Postgres counters are sufficient at this scale.
+
+### Consequences
+- One extra indexed lookup per protected request (`auth.sessions` and `profiles`).
+- The backend needs read and delete access to `auth.sessions`, which it has through the privileged database role.
+- Presence is correct for a single backend instance only. It must move to the realtime layer (ADL-013) before scaling out.
+- The SPA and API must share a registrable domain in production for the cookie (already noted in ADL-011; affects OD-003).
+- Social login (FR-AUTH-003) still needs a backend authorisation-code callback; not built yet.
+
+---
 ## Decisions Pending (Open Decisions from PRD)
 
 | OD ID | Decision | Status | Blocks |
@@ -655,3 +690,4 @@ Each of these will become a new ADL entry when resolved.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | November 2026 | Kiro (Principal Architect) | Initial draft; ADL-001 through ADL-009 |
+| 1.1 | November 2026 | Kiro | ADL-019 authentication module implementation |
