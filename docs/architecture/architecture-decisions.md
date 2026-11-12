@@ -52,7 +52,7 @@ Chikka Reborn has multiple distinct domains: auth, messaging, SMS, AI, credits, 
 ## ADL-002 — Supabase Realtime for Phase 1 WebSocket
 
 **Date:** November 2026  
-**Status:** Accepted  
+**Status:** Superseded by ADL-013 and ADL-020 (Implementation 04)  
 **Deciders:** Principal Architect  
 
 ### Context
@@ -212,7 +212,7 @@ FastAPI is an async framework. Database access can be synchronous (blocking) or 
 ## ADL-008 — Custom WebSocket Server Deferred to Phase 2+
 
 **Date:** November 2026  
-**Status:** Accepted (Deferred)  
+**Status:** Superseded by ADL-013 and ADL-020 (Implementation 04)  
 **Deciders:** Principal Architect  
 
 ### Context
@@ -392,7 +392,7 @@ Option 1, as already fixed in `technology-stack.md`. Refinement: routers live in
 ## ADL-013 — WebSocket Strategy: Backend Gateway with Postgres Fan-Out
 
 **Date:** November 2026  
-**Status:** Proposed (would supersede ADL-002 and ADL-008)  
+**Status:** Accepted, supersedes ADL-002 and ADL-008. Phase 1 fan-out amended by ADL-020.  
 **Deciders:** Principal Architect (review pending)  
 
 ### Context
@@ -668,6 +668,39 @@ ADL-011 makes the backend the authorisation authority and keeps tokens out of sc
 - Social login (FR-AUTH-003) still needs a backend authorisation-code callback; not built yet.
 
 ---
+## ADL-020 — Real-Time Messaging Implementation (Phase 1)
+
+**Date:** November 2026  
+**Status:** Accepted (implemented in Implementation 04)  
+**Deciders:** Engineering  
+
+### Context
+The repository held two conflicting real-time records: ADL-002 (Supabase Realtime, accepted) and ADL-013 (backend WebSocket gateway, proposed). Module C needed one mechanism. Facts that decided it:
+
+- Authentication is backend-mediated (ADL-011, ADL-019). The browser has no Supabase client and no direct table access, so Supabase Realtime would add a second client and a second authorisation path.
+- "Delivered" must mean the recipient's app acknowledged a message. That needs an uplink frame the backend records. Pushing a frame is not proof of anything.
+- Blocked senders' messages must never reach the recipient, and recipients must be re-checked at delivery time. Both are simple server-side and awkward with `postgres_changes`.
+- The project runs one backend instance today.
+
+### Decision
+1. **Adopt ADL-013's gateway**: `GET /ws/v1`, authenticated by the first frame within 5 seconds (never a URL token), with the same checks as REST (valid token, live Supabase session, active and onboarded account). Writes stay on REST.
+2. **Fan-out in process for Phase 1.** `RealtimeHub` holds this instance's connections. Services publish after commit, to recipients they have checked. The Postgres `NOTIFY` listener in ADL-013 is deferred until a second backend instance is needed.
+3. **REST is the source of truth.** Clients resync after every (re)connect and on a gap in `seq`. There is no server replay buffer.
+4. **Lifecycle**: `sent` = stored; `delivered` = recipient ack frame, or the recipient loading the conversation over REST; `read` = only when both people enable read receipts. `pending` and `failed` exist only on the sender's device, which retries with the same `client_message_id` (unique per sender) so a message is stored once.
+5. **Supabase Realtime is not used.** It stays enabled in the project but unused, so there are not two competing systems.
+
+### Options Considered
+- **Supabase Realtime (ADL-002)**: no gateway to run, but needs the Supabase JS client and browser table access (conflicts with ADL-011), cannot record acknowledgements, and filters by RLS only.
+- **Gateway plus NOTIFY now**: correct for several instances, but adds a long-lived `LISTEN` connection (needs a session-mode connection, not the pooler) and is harder to test, with no benefit on one instance.
+- **Redis pub/sub**: an extra datastore without an ADR (technology-stack restriction).
+
+### Consequences
+- **Single instance only.** Running two backend instances without the NOTIFY listener would deliver pushes only to clients on the sending instance. Messages are still stored, and clients catch up through REST (the list refreshes every 60 seconds), but real-time push would be partial. Adding the listener is the trigger before scaling out. Presence has the same limitation (ADL-019).
+- Sockets close on sign-out (`4401`), account deletion, and token expiry plus 30 seconds unless refreshed with `auth.refresh`.
+- New table `message_attachments` and private bucket `message-attachments` (migration `20261111000003`). Images are re-encoded to drop EXIF, except GIFs, which are only validated so animation survives.
+- Wire protocol: `docs/api/realtime-api.md`. REST contract: `docs/api/messaging-api.md`.
+
+---
 ## Decisions Pending (Open Decisions from PRD)
 
 | OD ID | Decision | Status | Blocks |
@@ -691,3 +724,4 @@ Each of these will become a new ADL entry when resolved.
 |---|---|---|---|
 | 1.0 | November 2026 | Kiro (Principal Architect) | Initial draft; ADL-001 through ADL-009 |
 | 1.1 | November 2026 | Kiro | ADL-019 authentication module implementation |
+| 1.2 | November 2026 | Kiro | ADL-020 real-time messaging; ADL-013 accepted; ADL-002 and ADL-008 superseded |

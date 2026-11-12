@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Star } from "lucide-react";
+import { MessageCircle, Star } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { FormAlert } from "@/components/common/FormAlert";
@@ -27,6 +28,7 @@ import {
 } from "@/features/contacts/schemas";
 import type { ContactDetail } from "@/features/contacts/types";
 import { toUserFacingError } from "@/lib/error-handling";
+import { paths } from "@/lib/paths";
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString(undefined, { dateStyle: "medium" });
@@ -160,20 +162,30 @@ function DrawerBody({ contact, onClose }: { contact: ContactDetail; onClose: () 
         <dd>{formatDate(contact.added_at)}</dd>
       </dl>
 
-      <Button
-        variant="secondary"
-        aria-pressed={contact.is_favourite}
-        disabled={update.isPending}
-        onClick={() =>
-          update.mutate({ id: contact.id, changes: { is_favourite: !contact.is_favourite } })
-        }
-      >
-        <Star
-          aria-hidden
-          className={contact.is_favourite ? "size-4 fill-away text-away" : "size-4"}
-        />
-        {contact.is_favourite ? "Remove from favourites" : "Add to favourites"}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        {contact.user_id ? (
+          <Button asChild>
+            <Link to={`${paths.newMessage}?user=${encodeURIComponent(contact.user_id)}`}>
+              <MessageCircle aria-hidden className="size-4" />
+              Message
+            </Link>
+          </Button>
+        ) : null}
+        <Button
+          variant="secondary"
+          aria-pressed={contact.is_favourite}
+          disabled={update.isPending}
+          onClick={() =>
+            update.mutate({ id: contact.id, changes: { is_favourite: !contact.is_favourite } })
+          }
+        >
+          <Star
+            aria-hidden
+            className={contact.is_favourite ? "size-4 fill-away text-away" : "size-4"}
+          />
+          {contact.is_favourite ? "Remove from favourites" : "Add to favourites"}
+        </Button>
+      </div>
 
       <NicknameForm key={contact.nickname ?? ""} contact={contact} />
       <GroupChecklist contact={contact} />

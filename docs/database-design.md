@@ -504,17 +504,15 @@ CREATE POLICY "ai_logs_admin_only" ON ai_usage_logs
 
 ---
 
-## 4. Supabase Realtime Configuration
+## 4. Real-Time Events
 
-The following tables are added to the Supabase Realtime publication for live event streaming to the frontend:
+Supabase Realtime is not used (ADL-020). No table is in the `supabase_realtime` publication. The backend pushes events through its own WebSocket gateway after each commit ([realtime-api.md](api/realtime-api.md)), so recipients, blocks and per-user visibility are checked in one place. The tables each push relates to:
 
-| Table | Events | Subscriber |
-|---|---|---|
-| `messages` | INSERT | Conversation participants |
-| `notifications` | INSERT | Notification owner |
-| `outbound_sms` | UPDATE (status) | Message sender |
-
-RLS policies automatically restrict Realtime events to the appropriate users.
+| Event | Source tables |
+|---|---|
+| `message.created` | `messages` (seq allocated by `trg_messages_assign_seq`) |
+| `message.status_changed` | `message_deliveries` (forward-only status, projected onto `messages.status` by `trg_deliveries_sync_message`) |
+| `conversation.read` | `conversation_members.last_read_seq` |
 
 ---
 
@@ -522,7 +520,8 @@ RLS policies automatically restrict Realtime events to the appropriate users.
 
 | Bucket | Contents | Access |
 |---|---|---|
-| `avatars` | User profile photos | Public read, owner write |
+| `avatars` | User profile photos (re-encoded WebP) | Private; backend writes, signed URLs (1 hour) |
+| `message-attachments` | Chat attachments (JPEG, PNG, WebP, GIF, PDF, up to 10 MB) | Private; backend writes after content checks, signed URLs (1 hour) for conversation members. Rows in `message_attachments` |
 | `exports` | User data export archives | Owner read only, signed URL |
 
 ---

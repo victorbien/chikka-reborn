@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Any, Literal
 from uuid import UUID
@@ -23,6 +24,8 @@ class TokenClaims(BaseModel):
     user_id: UUID
     session_id: UUID
     email: str | None = None
+    # When the token stops being valid. Long-lived connections (the WebSocket) enforce it.
+    expires_at: datetime | None = None
 
 
 class AuthenticatedUser(BaseModel):
@@ -127,8 +130,12 @@ def decode_access_token(token: str, settings: Settings) -> TokenClaims:
         raise AuthenticationError("The access token is not valid.") from exc
 
     email = claims.get("email")
+    expires = claims.get("exp")
     return TokenClaims(
         user_id=user_id,
         session_id=session_id,
+        expires_at=datetime.fromtimestamp(expires, UTC)
+        if isinstance(expires, int | float)
+        else None,
         email=email if isinstance(email, str) and email else None,
     )

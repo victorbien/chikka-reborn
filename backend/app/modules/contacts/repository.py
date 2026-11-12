@@ -258,6 +258,37 @@ class ContactRepository:
             found.update(i for i in (await self._session.execute(statement)).scalars() if i)
         return found
 
+    async def all_blocked_ids(self, blocker_id: UUID) -> set[UUID]:
+        statement = select(UserBlock.blocked_user_id).where(
+            UserBlock.blocker_id == blocker_id, UserBlock.blocked_user_id.is_not(None)
+        )
+        return {i for i in (await self._session.execute(statement)).scalars() if i is not None}
+
+    async def contact_user_ids(self, owner_id: UUID, user_ids: Sequence[UUID]) -> set[UUID]:
+        """Which of `user_ids` are Chikka contacts of the owner (block state not considered)."""
+        if not user_ids:
+            return set()
+        statement = select(Contact.contact_user_id).where(
+            Contact.owner_id == owner_id, Contact.contact_user_id.in_(set(user_ids))
+        )
+        return {i for i in (await self._session.execute(statement)).scalars() if i is not None}
+
+    async def blocked_by(self, blocker_id: UUID, user_ids: Sequence[UUID]) -> set[UUID]:
+        if not user_ids:
+            return set()
+        statement = select(UserBlock.blocked_user_id).where(
+            UserBlock.blocker_id == blocker_id, UserBlock.blocked_user_id.in_(set(user_ids))
+        )
+        return {i for i in (await self._session.execute(statement)).scalars() if i is not None}
+
+    async def blockers_of(self, user_id: UUID, user_ids: Sequence[UUID]) -> set[UUID]:
+        if not user_ids:
+            return set()
+        statement = select(UserBlock.blocker_id).where(
+            UserBlock.blocked_user_id == user_id, UserBlock.blocker_id.in_(set(user_ids))
+        )
+        return set((await self._session.execute(statement)).scalars())
+
     async def has_blocked(self, blocker_id: UUID, target_id: UUID) -> bool:
         statement = select(
             exists().where(

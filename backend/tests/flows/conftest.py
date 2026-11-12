@@ -210,6 +210,12 @@ def harness(database_url: str) -> Iterator[Harness]:
         ),
         otp=SimulatedOtpDelivery(inbox),
         inbox=inbox,
+        attachment_storage=SupabaseStorageProvider(
+            base_url=FAKE_BASE,
+            service_role_key=SERVICE_KEY,
+            bucket="message-attachments",
+            client=httpx.AsyncClient(transport=transport),
+        ),
     )
     app = create_app(settings, providers=providers)
     with TestClient(app, raise_server_exceptions=False) as client:

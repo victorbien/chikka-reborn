@@ -11,7 +11,7 @@ const outFile = path.resolve(here, '../../docs/database/schema-reference.md');
 const groups = [
   ['Identity and privacy', ['profiles', 'phone_numbers', 'user_consents']],
   ['Contacts and safety', ['contacts', 'contact_requests', 'contact_groups', 'contact_group_members', 'user_blocks', 'abuse_reports']],
-  ['Conversations and messages', ['conversations', 'conversation_members', 'messages', 'message_hides', 'message_segments']],
+  ['Conversations and messages', ['conversations', 'conversation_members', 'messages', 'message_hides', 'message_segments', 'message_attachments']],
   ['Delivery and SMS', ['message_deliveries', 'message_delivery_events', 'provider_webhooks', 'sms_routes', 'sms_opt_outs', 'sms_country_capabilities', 'provider_configurations']],
   ['Credits', ['messaging_credits', 'credit_transactions']],
   ['Notifications', ['notification_preferences', 'notifications']],

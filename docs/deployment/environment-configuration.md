@@ -61,6 +61,7 @@ All three environments: development, staging, production.
 | `COOKIE_SECURE` | Override for the refresh cookie `Secure` flag. Default: on in `staging`/`production`, off in local development | (unset) |
 | `TERMS_VERSION`, `PRIVACY_VERSION` | Notice versions recorded with registration consent | `2026-11-01` |
 | `AVATAR_BUCKET` | Supabase Storage bucket for profile photos | `avatars` |
+| `ATTACHMENT_BUCKET` | Private Storage bucket for message attachments (created by migration `20261111000003`) | `message-attachments` |
 
 ### Required — Live SMS Mode Only
 
@@ -120,7 +121,7 @@ Two example files are committed (`backend/.env.example` and `frontend/.env.examp
 
 ### `backend/.env.example`
 
-> The committed file currently contains only the variables the code reads (foundation plus Module A: `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_SECRET_KEY`, `FRONTEND_BASE_URL`, `COOKIE_SECURE`, `TERMS_VERSION`, `PRIVACY_VERSION`, `AVATAR_BUCKET`). Twilio, AWS/Bedrock, service-role and rate-limit variables are added in the phase that first reads them, so the example never lists settings that do nothing.
+> The committed file currently contains only the variables the code reads (foundation plus Module A: `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_SECRET_KEY`, `FRONTEND_BASE_URL`, `COOKIE_SECURE`, `TERMS_VERSION`, `PRIVACY_VERSION`, `AVATAR_BUCKET`, `ATTACHMENT_BUCKET`). Twilio, AWS/Bedrock, service-role and rate-limit variables are added in the phase that first reads them, so the example never lists settings that do nothing.
 
 ```env
 # ─── Supabase ────────────────────────────────────────────────

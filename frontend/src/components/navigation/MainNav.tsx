@@ -16,6 +16,7 @@ export const PUBLIC_NAV_ITEMS: readonly NavItem[] = [
 /** Only routes that exist today. Module entries are added as their features land. */
 export const MAIN_NAV_ITEMS: readonly NavItem[] = [
   { to: paths.home, label: "Home" },
+  { to: paths.messages, label: "Messages" },
   { to: paths.contacts, label: "Contacts" },
   { to: paths.settings, label: "Settings" },
   { to: paths.styleGuide, label: "Style guide" },

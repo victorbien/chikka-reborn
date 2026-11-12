@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api import websocket
 from app.api.container import Providers, build_providers
 from app.api.v1 import health
 from app.api.v1.router import api_router
@@ -44,6 +45,7 @@ def create_app(settings: Settings | None = None, providers: Providers | None = N
         try:
             yield
         finally:
+            app_providers.realtime.close_all()
             if app.state.database is not None:
                 await app.state.database.dispose()
             if owns_providers:
@@ -67,11 +69,13 @@ def create_app(settings: Settings | None = None, providers: Providers | None = N
     app.dependency_overrides[get_settings] = lambda: settings
     app.state.database = None
     app.state.providers = app_providers
+    app.state.settings = settings
 
     register_middleware(app, settings)
     register_exception_handlers(app)
     app.include_router(api_router, prefix=API_V1_PREFIX)
     app.include_router(health.platform_router)
+    app.include_router(websocket.router)
     return app
 
 

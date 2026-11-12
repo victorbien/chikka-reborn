@@ -6,10 +6,12 @@ import { PageLoader } from "@/components/common/PageLoader";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { MAIN_NAV_ITEMS, PUBLIC_NAV_ITEMS } from "@/components/navigation/MainNav";
 import { SignOutButton } from "@/features/auth/components/SignOutButton";
+import { ChatRealtimeBridge } from "@/features/chat/components/ChatRealtimeBridge";
 import { usePresence } from "@/features/profile/hooks/usePresenceHeartbeat";
 import { useMe } from "@/features/profile/hooks/useProfile";
 import { useSession } from "@/lib/auth/session";
 import { useDisplayMode } from "@/lib/display-mode";
+import { RealtimeProvider } from "@/lib/realtime/provider";
 import { toUserFacingError } from "@/lib/error-handling";
 import { paths } from "@/lib/paths";
 
@@ -86,24 +88,28 @@ export function SignedInAppLayout() {
   }, [uiMode, setMode]);
 
   return (
-    <AppLayout
-      navItems={MAIN_NAV_ITEMS}
-      headerActions={
-        me.data ? (
-          <>
-            <span className="flex items-center gap-2 text-sm">
-              <Avatar
-                name={me.data.display_name}
-                imageUrl={me.data.avatar_url ?? undefined}
-                size="sm"
-              />
-              <span className="hidden sm:inline">{me.data.display_name}</span>
-            </span>
-            <SignOutButton onSignedOut={() => navigate(paths.signIn, { replace: true })} />
-          </>
-        ) : null
-      }
-    />
+    // One real-time connection for the whole signed-in app (active accounts only).
+    <RealtimeProvider enabled={me.data?.status === "active" && me.data.onboarding_completed}>
+      <ChatRealtimeBridge />
+      <AppLayout
+        navItems={MAIN_NAV_ITEMS}
+        headerActions={
+          me.data ? (
+            <>
+              <span className="flex items-center gap-2 text-sm">
+                <Avatar
+                  name={me.data.display_name}
+                  imageUrl={me.data.avatar_url ?? undefined}
+                  size="sm"
+                />
+                <span className="hidden sm:inline">{me.data.display_name}</span>
+              </span>
+              <SignOutButton onSignedOut={() => navigate(paths.signIn, { replace: true })} />
+            </>
+          ) : null
+        }
+      />
+    </RealtimeProvider>
   );
 }
 

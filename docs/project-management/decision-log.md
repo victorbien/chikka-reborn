@@ -63,7 +63,7 @@ These decisions are blocking or will block phase starts. Each has a `Due By` dat
 
 ### DEC-ARCH-002 — Supabase Realtime for Phase 1 WebSocket
 **Date:** November 2026  
-**Status:** ✅ Decided  
+**Status:** Superseded by DEC-ARCH-011 and DEC-ARCH-021 (Implementation 04)  
 **Decision:** Use Supabase Realtime for real-time message delivery in Phase 1. Custom WS server deferred to Phase 2+ if limits are reached.  
 **Full ADR:** `docs/architecture/architecture-decisions.md` ADL-002
 
@@ -120,7 +120,7 @@ These decisions are blocking or will block phase starts. Each has a `Due By` dat
 | DEC-ARCH-008 | Modular monolith with enforced module boundaries | ADL-010 | Refines DEC-ARCH-001, DEC-ARCH-005 |
 | DEC-ARCH-009 | Supabase DB/Auth; backend is the authorisation authority; RLS is defence in depth; cookie-based refresh | ADL-011 | Refines DEC-ARCH-006; proposes resolving OD-012, OD-014 |
 | DEC-ARCH-010 | FastAPI async backend with module routers, `web` and `worker` processes | ADL-012 | Refines DEC-ARCH-005, DEC-ARCH-007 |
-| DEC-ARCH-011 | Backend WebSocket gateway with Postgres NOTIFY fan-out | ADL-013 | Would supersede DEC-ARCH-002 |
+| DEC-ARCH-011 | Backend WebSocket gateway with Postgres NOTIFY fan-out | ADL-013 | Accepted; supersedes DEC-ARCH-002. NOTIFY fan-out deferred by DEC-ARCH-021 |
 | DEC-ARCH-012 | SMS provider abstraction, policy pipeline, explicit modes | ADL-014 | Refines DEC-ARCH-003, DEC-PROD-001 |
 | DEC-ARCH-013 | AI provider abstraction with staged, non-sending pipeline | ADL-015 | Refines DEC-ARCH-003, DEC-ARCH-004, DEC-PROD-002 |
 | DEC-ARCH-014 | Postgres job queue and outbox for delivery and retry | ADL-016 | Resolves ADL-009 |
@@ -128,6 +128,7 @@ These decisions are blocking or will block phase starts. Each has a `Due By` dat
 | DEC-ARCH-017 | Frontend UI dependencies pinned: Tailwind CSS 4.3.5, Radix primitives (dialog, slot, switch, tabs, tooltip), class-variance-authority, clsx, tailwind-merge, lucide-react. Mode theming via CSS variables and `data-mode`. | Not yet an ADL entry | Implements `docs/design/design-system.md`; all are the shadcn/ui foundation already approved in the stack |
 | DEC-ARCH-018 | Foundation dependencies pinned. Frontend: @tanstack/react-query 5.107.1, zod 4.6.7 (both in the approved stack); dev tooling eslint 10.14.0, typescript-eslint 8.72.2, eslint-plugin-react-hooks 7.1.1, prettier 3.9.10. Backend: fastapi 0.162.4, uvicorn 0.54.0, pydantic 2.14.3, pydantic-settings 2.16.2, sqlalchemy 2.1.8, asyncpg 0.32.0 (async PostgreSQL driver required by async SQLAlchemy), PyJWT 2.15.1 (verifies Supabase access tokens; chosen over python-jose, which is less maintained); dev: pytest, pytest-asyncio, pytest-cov, httpx (TestClient), ruff, mypy. Health is served at `/api/v1/health` and `/api/v1/health/ready` for clients, with `/healthz` and `/readyz` aliases for platforms (ADL health requirement). | Not yet an ADL entry | Implements Implementation 01; supersedes the `/health` path in older deployment docs (see api-overview section 12) |
 | DEC-ARCH-019 | Authentication module (Implementation 02): backend-mediated Supabase Auth over REST, memory access token plus httpOnly refresh cookie with CSRF header, per-request session liveness check, backend-owned mobile OTP behind `OtpDelivery`, Postgres rate limits. New pinned dependencies with reasons. Backend: httpx 0.28.1 moved to runtime (GoTrue and Storage REST), email-validator 2.3.0 (Pydantic `EmailStr`), phonenumbers 9.0.43 (E.164 parsing and country), pillow 13.0.0 (photo validation and re-encoding), python-multipart 0.0.33 (FastAPI uploads), tzdata 2026.6 (IANA zones on Windows). Frontend: react-hook-form 7.91.0 and @hookform/resolvers 7.0.5 (approved stack), @vitest/coverage-v8 5.1.0 (dev; measures the coverage floors). Database tools: @electric-sql/pglite-socket 0.2.19 (dev; PGlite over the wire for flow tests). | ADL-019 | Implements ADL-011 for Module A |
+| DEC-ARCH-021 | Real-time messaging (Implementation 04): FastAPI WebSocket gateway `/ws/v1` with first-frame auth, in-process fan-out for a single backend instance (Postgres NOTIFY deferred until a second instance), REST as source of truth with resync on reconnect and on `seq` gaps, "delivered" = recipient ack, read receipts only when both opt in. Supabase Realtime unused. No new dependencies (the emoji picker is built in; WebSockets are native). | ADL-020 | Accepts ADL-013; supersedes DEC-ARCH-002 |
 
 ---
 
@@ -141,7 +142,7 @@ These decisions are blocking or will block phase starts. Each has a `Due By` dat
 
 ---
 
-### DEC-ARCH-017 — Verify Supabase Access Tokens Through JWKS
+### DEC-ARCH-020 — Verify Supabase Access Tokens Through JWKS
 
 **Status:** Recorded. **Phase:** 1. **Related:** FR-AUTH-006, security-architecture.
 

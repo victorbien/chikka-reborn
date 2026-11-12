@@ -9,5 +9,7 @@ export const paths = {
   verifyEmail: "/auth/verify-email",
   onboarding: "/onboarding",
   contacts: "/contacts",
+  messages: "/messages",
+  newMessage: "/messages/new",
   settings: "/settings/profile",
 } as const;

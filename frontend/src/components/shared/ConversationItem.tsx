@@ -5,6 +5,7 @@ import { ChannelBadge } from "./ChannelBadge";
 
 export interface ConversationItemProps {
   name: string;
+  avatarUrl?: string;
   lastMessagePreview: string;
   timestamp: string;
   unreadCount?: number;
@@ -17,6 +18,7 @@ export interface ConversationItemProps {
 
 export function ConversationItem({
   name,
+  avatarUrl,
   lastMessagePreview,
   timestamp,
   unreadCount = 0,
@@ -36,7 +38,7 @@ export function ConversationItem({
         selected && "bg-surface-raised",
       )}
     >
-      <Avatar name={name} presence={presence} />
+      <Avatar name={name} imageUrl={avatarUrl} presence={presence} />
       <span className="min-w-0 flex-1 space-y-0.5">
         <span className="flex items-baseline justify-between gap-2">
           <span className="truncate text-sm font-semibold">{name}</span>

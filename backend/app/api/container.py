@@ -24,6 +24,7 @@ from app.integrations.storage_provider import (
     UnconfiguredStorageProvider,
 )
 from app.modules.profiles.presence import PresenceRegistry
+from app.realtime.hub import RealtimeHub
 
 
 @dataclass
@@ -33,9 +34,12 @@ class Providers:
     otp: OtpDelivery
     inbox: SimulatedInbox = field(default_factory=SimulatedInbox)
     presence: PresenceRegistry = field(default_factory=PresenceRegistry)
+    # Message attachments live in their own private bucket.
+    attachment_storage: StorageProvider = field(default_factory=UnconfiguredStorageProvider)
+    realtime: RealtimeHub = field(default_factory=RealtimeHub)
 
     async def aclose(self) -> None:
-        for provider in (self.auth, self.storage):
+        for provider in (self.auth, self.storage, self.attachment_storage):
             close = getattr(provider, "aclose", None)
             if close is not None:
                 await close()
@@ -59,14 +63,21 @@ def build_providers(settings: Settings) -> Providers:
         auth = UnconfiguredAuthProvider()
 
     storage: StorageProvider
+    attachment_storage: StorageProvider
     if settings.supabase_url and service_key:
         storage = SupabaseStorageProvider(
             base_url=settings.supabase_url,
             service_role_key=service_key,
             bucket=settings.avatar_bucket,
         )
+        attachment_storage = SupabaseStorageProvider(
+            base_url=settings.supabase_url,
+            service_role_key=service_key,
+            bucket=settings.attachment_bucket,
+        )
     else:
         storage = UnconfiguredStorageProvider()
+        attachment_storage = UnconfiguredStorageProvider()
 
     inbox = SimulatedInbox()
     otp: OtpDelivery = (
@@ -74,4 +85,6 @@ def build_providers(settings: Settings) -> Providers:
         if settings.sms_provider_mode == "mock"
         else UnavailableLiveOtpDelivery()
     )
-    return Providers(auth=auth, storage=storage, otp=otp, inbox=inbox)
+    return Providers(
+        auth=auth, storage=storage, otp=otp, inbox=inbox, attachment_storage=attachment_storage
+    )

@@ -18,6 +18,7 @@ import {
 } from "@/routes/guards";
 import { ContactsPage } from "@/routes/ContactsPage";
 import { HomePage } from "@/routes/HomePage";
+import { MessagesPage, NewConversationPage } from "@/routes/MessagesPage";
 import { NotFoundPage } from "@/routes/NotFoundPage";
 import { ProfileSettingsPage, ProfileSetupPage } from "@/routes/ProfilePages";
 import { RouteErrorPage } from "@/routes/RouteErrorPage";
@@ -59,6 +60,9 @@ export const appRoutes: RouteObject[] = [
                 children: [
                   { index: true, element: <HomePage /> },
                   { path: paths.contacts, element: <ContactsPage /> },
+                  { path: paths.newMessage, element: <NewConversationPage /> },
+                  { path: paths.messages, element: <MessagesPage /> },
+                  { path: `${paths.messages}/:conversationId`, element: <MessagesPage /> },
                   { path: paths.settings, element: <ProfileSettingsPage /> },
                 ],
               },

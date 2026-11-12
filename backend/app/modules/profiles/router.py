@@ -8,6 +8,7 @@ from app.api.deps import (
     CurrentUserDep,
     PhoneServiceDep,
     ProfileServiceDep,
+    ProvidersDep,
     RequestMetaDep,
     SettingsDep,
 )
@@ -84,8 +85,10 @@ async def delete_me(
     service: AccountServiceDep,
     settings: SettingsDep,
     meta: RequestMetaDep,
+    providers: ProvidersDep,
 ) -> DataResponse[AccountDeletedResponse]:
     deleted_at = await service.delete_account(user, body.password, meta)
+    providers.realtime.disconnect_user(user.id)
     clear_refresh_cookie(response, settings)
     return ok(
         AccountDeletedResponse(

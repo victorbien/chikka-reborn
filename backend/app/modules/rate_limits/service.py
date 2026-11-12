@@ -51,6 +51,15 @@ CONTACT_REQUEST_PER_USER = Limit(
     message="You have reached today's limit of contact requests.",
 )
 CONTACT_WRITE_PER_USER = Limit("contacts.write.user", 200, 3600)
+# FR-MSG-001 AC5. Attachments: generous for normal use, bounded for storage abuse.
+MESSAGE_SEND_PER_USER = Limit(
+    "chat.send.user", 60, 60, message="You are sending messages too quickly. Please wait a moment."
+)
+ATTACHMENT_UPLOAD_PER_USER = Limit(
+    "chat.attachment.user", 60, 3600, message="Too many uploads. Please try again later."
+)
+CHAT_SEARCH_PER_USER = Limit("chat.search.user", 30, 60, message="Too many searches. Please wait.")
+CHAT_WRITE_PER_USER = Limit("chat.write.user", 300, 3600)
 
 
 class RateLimiter:

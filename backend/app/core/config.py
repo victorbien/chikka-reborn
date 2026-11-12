@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     # Backend-only. Used for admin calls (ban user) and Storage writes. Never sent to the browser.
     supabase_service_role_key: SecretStr | None = None
     avatar_bucket: str = "avatars"
+    attachment_bucket: str = "message-attachments"
 
     # Keys the HMACs for rate-limit subjects and OTP hashes. Required outside dev/test.
     app_secret_key: SecretStr | None = None
