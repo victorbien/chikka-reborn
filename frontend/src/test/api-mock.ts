@@ -5,6 +5,8 @@ import type { Profile } from "@/features/profile/types";
 export interface MockRequest {
   method: string;
   path: string;
+  /** Query string including the leading "?", or "". */
+  search: string;
   body: unknown;
   headers: Record<string, string>;
   credentials: RequestCredentials | undefined;
@@ -41,6 +43,7 @@ export function mockApi(routes: Record<string, MockHandler>) {
     const request: MockRequest = {
       method,
       path: url.pathname,
+      search: url.search,
       body: typeof rawBody === "string" ? (JSON.parse(rawBody) as unknown) : rawBody,
       headers: { ...(init?.headers as Record<string, string> | undefined) },
       credentials: init?.credentials,
@@ -76,6 +79,7 @@ export function makeProfile(overrides: Partial<Profile> = {}): Profile {
     email_verified: true,
     avatar_url: null,
     bio: null,
+    status_message: null,
     country_code: "PH",
     language: "en",
     time_zone: "Asia/Manila",

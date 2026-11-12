@@ -35,6 +35,8 @@ from app.modules.profiles.schemas import (
     PhoneSummary,
     PresencePreference,
     PresenceResponse,
+    PrivacySettings,
+    PrivacySettingsUpdate,
     ProfileResponse,
     ProfileUpdateRequest,
 )
@@ -105,6 +107,7 @@ class ProfileService:
             email_verified=profile.status != "pending_verification",
             avatar_url=await self._avatar_url(profile.avatar_path),
             bio=profile.bio,
+            status_message=profile.status_message,
             country_code=profile.country_code,
             language=profile.language,
             time_zone=profile.time_zone,
@@ -140,6 +143,40 @@ class ProfileService:
                 profile = await repository.apply(profile, changes)
             phone = await PhoneRepository(session).any_verified_for_user(user.id)
         return await self._to_response(profile, user, phone_row=phone)
+
+    async def get_privacy(self, user: AuthenticatedUser) -> PrivacySettings:
+        async with self._db.transaction() as session:
+            profile = await self._own_profile(ProfileRepository(session), user)
+        return self._privacy(profile)
+
+    async def update_privacy(
+        self, user: AuthenticatedUser, request: PrivacySettingsUpdate
+    ) -> PrivacySettings:
+        changes = request.model_dump(exclude_unset=True)
+        await self._limiter.hit(limits.PROFILE_WRITE_PER_USER, str(user.id))
+        async with self._db.transaction() as session:
+            repository = ProfileRepository(session)
+            profile = await self._own_profile(repository, user)
+            if changes:
+                profile = await repository.apply(profile, changes)
+                await self._audit.record(
+                    session,
+                    category="privacy",
+                    action="privacy.settings_changed",
+                    actor_id=user.id,
+                    metadata={"fields": sorted(changes)},
+                )
+        return self._privacy(profile)
+
+    @staticmethod
+    def _privacy(profile: Profile) -> PrivacySettings:
+        return PrivacySettings(
+            profile_visibility=profile.profile_visibility,
+            share_presence=profile.share_presence,
+            show_last_seen=profile.show_last_seen,
+            discoverable_by_email=profile.discoverable_by_email,
+            discoverable_by_phone=profile.discoverable_by_phone,
+        )
 
     async def complete_onboarding(
         self, user: AuthenticatedUser, request: OnboardingRequest

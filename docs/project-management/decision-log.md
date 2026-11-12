@@ -166,6 +166,16 @@ These decisions are blocking or will block phase starts. Each has a `Due By` dat
 
 ---
 
+### DEC-PROD-004 — Contact Discovery Without Enumeration
+
+**Status:** Recorded. **Phase:** 1. **Related:** FR-CONTACTS-007, FR-PRIVACY-001, FR-PRIVACY-005.
+
+- Strangers are found only by an exact username, email or verified mobile number. There is no browsing or prefix search of other users.
+- Email and number lookup are opt-in (`discoverable_by_email`, `discoverable_by_phone`, both off by default). A username is findable unless the profile is `private`; the default `contacts` visibility still allows an exact-username request, because otherwise nobody could ever be added. The result card is limited to username, display name and photo.
+- Not found, not discoverable, private, blocked and inactive all return the same empty result, and contact requests to such targets return the same "sent" response. A caller cannot learn whether an address or number is registered.
+- Email lookup uses the service-role-only function `private.find_user_id_by_email`, because `auth.users` is not readable by clients.
+- Rejected requests are invisible to the sender, who can ask again after 7 days. Blocks are invisible to the blocked person.
+- Removing a Chikka contact deletes both directions of the relationship, since the relationship is mutual.
 ### DEC-LEGAL-001 — Independent Project Disclaimer Required
 **Date:** November 2026  
 **Status:** ✅ Decided — Permanent  

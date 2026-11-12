@@ -78,13 +78,19 @@ describe("profile schemas", () => {
     const parsed = profileFormSchema.parse({
       display_name: "<i>Rowena</i>",
       bio: "   ",
+      status_message: "  <b>Busy</b> ",
       country_code: "ph",
       language: "fil",
       time_zone: "Asia/Manila",
       theme: "dark",
       ui_mode: "classic",
     });
-    expect(parsed).toMatchObject({ display_name: "Rowena", bio: null, country_code: "PH" });
+    expect(parsed).toMatchObject({
+      display_name: "Rowena",
+      bio: null,
+      status_message: "Busy",
+      country_code: "PH",
+    });
   });
 
   it("rejects unknown countries, languages and zones", () => {

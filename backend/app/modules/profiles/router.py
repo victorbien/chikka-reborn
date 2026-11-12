@@ -29,6 +29,8 @@ from app.modules.profiles.schemas import (
     OnboardingRequest,
     PresenceResponse,
     PresenceUpdateRequest,
+    PrivacySettings,
+    PrivacySettingsUpdate,
     ProfileResponse,
     ProfileUpdateRequest,
 )
@@ -47,6 +49,20 @@ async def update_me(
     body: ProfileUpdateRequest, user: ActiveUserDep, service: ProfileServiceDep
 ) -> DataResponse[ProfileResponse]:
     return ok(await service.update_me(user, body))
+
+
+@router.get("/privacy", summary="Who can find you and see your presence")
+async def get_privacy(
+    user: ActiveUserDep, service: ProfileServiceDep
+) -> DataResponse[PrivacySettings]:
+    return ok(await service.get_privacy(user))
+
+
+@router.patch("/privacy", summary="Change discoverability and presence sharing")
+async def update_privacy(
+    body: PrivacySettingsUpdate, user: ActiveUserDep, service: ProfileServiceDep
+) -> DataResponse[PrivacySettings]:
+    return ok(await service.update_privacy(user, body))
 
 
 @router.post("/onboarding", summary="Finish profile setup (username and basics)")

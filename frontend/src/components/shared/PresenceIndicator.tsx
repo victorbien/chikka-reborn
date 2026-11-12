@@ -4,14 +4,18 @@ import type { PresenceStatus } from "@/lib/types";
 const LABELS: Record<PresenceStatus, string> = {
   online: "Online",
   away: "Away",
+  busy: "Busy",
   offline: "Offline",
+  unknown: "Presence hidden",
 };
 
 // Status is never colour alone: shape differs too (filled, half, hollow).
 const SHAPES: Record<PresenceStatus, string> = {
   online: "bg-online",
   away: "bg-away",
+  busy: "bg-danger",
   offline: "border-2 border-offline bg-transparent",
+  unknown: "border-2 border-dashed border-offline bg-transparent",
 };
 
 export interface PresenceIndicatorProps {

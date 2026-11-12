@@ -6,6 +6,7 @@ import type {
   PhoneStatus,
   PresenceInfo,
   PresencePreference,
+  PrivacySettings,
   Profile,
   SimulatedSms,
 } from "@/features/profile/types";
@@ -26,6 +27,10 @@ export function createProfileApi(client: ApiClient = apiClient) {
         .post<Envelope<{ avatar_url: string | null }>>(`${ME}/avatar`, form)
         .then(unwrap);
     },
+    getPrivacy: (signal?: AbortSignal) =>
+      client.get<Envelope<PrivacySettings>>(`${ME}/privacy`, { signal }).then(unwrap),
+    updatePrivacy: (changes: Partial<PrivacySettings>) =>
+      client.patch<Envelope<PrivacySettings>>(`${ME}/privacy`, changes).then(unwrap),
     removeAvatar: () => client.delete<void>(`${ME}/avatar`),
     setPresence: (preference: PresencePreference) =>
       client.put<Envelope<PresenceInfo>>(`${ME}/presence`, { preference }).then(unwrap),

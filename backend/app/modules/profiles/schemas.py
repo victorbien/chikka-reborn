@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from app.core.sanitize import clean_text
 from app.modules.profiles.reference import (
@@ -34,6 +34,15 @@ def _bio(value: str | None) -> str | None:
     cleaned = clean_text(value)
     if len(cleaned) > 160:
         raise ValueError("Bio must be at most 160 characters")
+    return cleaned or None
+
+
+def _status_message(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = clean_text(value)
+    if len(cleaned) > 80:
+        raise ValueError("Status message must be at most 80 characters")
     return cleaned or None
 
 
@@ -74,6 +83,7 @@ class ProfileUpdateRequest(BaseModel):
 
     display_name: str | None = None
     bio: str | None = None
+    status_message: str | None = None
     country_code: str | None = None
     language: str | None = None
     time_zone: str | None = None
@@ -89,6 +99,11 @@ class ProfileUpdateRequest(BaseModel):
     @classmethod
     def _v_bio(cls, value: str | None) -> str | None:
         return _bio(value)
+
+    @field_validator("status_message")
+    @classmethod
+    def _v_status_message(cls, value: str | None) -> str | None:
+        return _status_message(value)
 
     @field_validator("country_code")
     @classmethod
@@ -158,6 +173,7 @@ class ProfileResponse(BaseModel):
     email_verified: bool
     avatar_url: str | None
     bio: str | None
+    status_message: str | None
     country_code: str | None
     language: str
     time_zone: str
@@ -170,6 +186,38 @@ class ProfileResponse(BaseModel):
     phone: PhoneSummary | None
     created_at: datetime
     updated_at: datetime
+
+
+ProfileVisibility = Literal["everyone", "contacts", "private"]
+SharePresence = Literal["everyone", "contacts", "nobody"]
+
+
+class PrivacySettings(BaseModel):
+    """Who can find and see you (FR-PRIVACY-001, 005). Safe defaults live in the database."""
+
+    profile_visibility: ProfileVisibility
+    share_presence: SharePresence
+    show_last_seen: bool
+    discoverable_by_email: bool
+    discoverable_by_phone: bool
+
+
+class PrivacySettingsUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    profile_visibility: ProfileVisibility | None = None
+    share_presence: SharePresence | None = None
+    show_last_seen: bool | None = None
+    discoverable_by_email: bool | None = None
+    discoverable_by_phone: bool | None = None
+
+    @model_validator(mode="after")
+    def _no_explicit_nulls(self) -> "PrivacySettingsUpdate":
+        # Omit a field to leave it unchanged; an explicit null is never meaningful.
+        for name in self.model_fields_set:
+            if getattr(self, name) is None:
+                raise ValueError(f"{name} cannot be null")
+        return self
 
 
 class AvatarResponse(BaseModel):

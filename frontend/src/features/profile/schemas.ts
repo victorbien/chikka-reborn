@@ -49,6 +49,11 @@ export const profileFormSchema = z.object({
     .transform(plainText)
     .pipe(z.string().max(160, "Use at most 160 characters."))
     .transform((value) => (value === "" ? null : value)),
+  status_message: z
+    .string()
+    .transform(plainText)
+    .pipe(z.string().max(80, "Use at most 80 characters."))
+    .transform((value) => (value === "" ? null : value)),
   country_code: country,
   language: z.enum(languageCodes, { error: "Choose a language." }),
   time_zone: timeZone,

@@ -14,6 +14,7 @@ from app.modules.audit.service import AuditLogger
 from app.modules.auth.account_service import AccountResolver, AccountService
 from app.modules.auth.phone_service import PhoneVerificationService
 from app.modules.auth.service import AuthService, RequestMeta
+from app.modules.contacts.service import ContactService
 from app.modules.profiles.service import ProfileService
 from app.modules.rate_limits.service import RateLimiter
 
@@ -161,6 +162,22 @@ def get_profile_service(
     )
 
 
+def get_contact_service(
+    database: RequiredDatabaseDep,
+    providers: ProvidersDep,
+    limiter: RateLimiterDep,
+    audit: AuditLoggerDep,
+) -> ContactService:
+    return ContactService(
+        database=database,
+        storage=providers.storage,
+        limiter=limiter,
+        audit=audit,
+        presence=providers.presence,
+    )
+
+
+ContactServiceDep = Annotated[ContactService, Depends(get_contact_service)]
 AccountServiceDep = Annotated[AccountService, Depends(get_account_service)]
 PhoneServiceDep = Annotated[PhoneVerificationService, Depends(get_phone_service)]
 ProfileServiceDep = Annotated[ProfileService, Depends(get_profile_service)]

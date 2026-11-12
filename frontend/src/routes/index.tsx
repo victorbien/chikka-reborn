@@ -16,6 +16,7 @@ import {
   RequireOnboarded,
   SignedInAppLayout,
 } from "@/routes/guards";
+import { ContactsPage } from "@/routes/ContactsPage";
 import { HomePage } from "@/routes/HomePage";
 import { NotFoundPage } from "@/routes/NotFoundPage";
 import { ProfileSettingsPage, ProfileSetupPage } from "@/routes/ProfilePages";
@@ -57,6 +58,7 @@ export const appRoutes: RouteObject[] = [
                 element: <SignedInAppLayout />,
                 children: [
                   { index: true, element: <HomePage /> },
+                  { path: paths.contacts, element: <ContactsPage /> },
                   { path: paths.settings, element: <ProfileSettingsPage /> },
                 ],
               },

@@ -155,7 +155,7 @@ The AI assistant (powered by Amazon Bedrock) supports smart replies, translation
 
 ## Getting Started
 
-> Built so far: the foundation (FastAPI backend, React app shell, design system, database schema) and **Module A, authentication and user management**: registration, email verification, sign-in with lockout, sign-out, password reset, sessions, profile setup and editing, profile photo, presence, mobile number verification (simulation) and account deletion. See [docs/api/authentication-api.md](docs/api/authentication-api.md) and the implementation status in [docs/product/frs/module-a-auth.md](docs/product/frs/module-a-auth.md).
+> Built so far: the foundation (FastAPI backend, React app shell, design system, database schema) and **Module A, authentication and user management**: registration, email verification, sign-in with lockout, sign-out, password reset, sessions, profile setup and editing, profile photo, presence, mobile number verification (simulation) and account deletion. Also built: **Module B, contacts and buddy list**: discovery, requests, groups, favourites, blocking, presence display and recent activity (SMS contacts come with Phase 2). See [docs/api/contacts-api.md](docs/api/contacts-api.md). See [docs/api/authentication-api.md](docs/api/authentication-api.md) and the implementation status in [docs/product/frs/module-a-auth.md](docs/product/frs/module-a-auth.md).
 
 See [docs/roadmap.md](docs/roadmap.md) for the planned development sequence.
 

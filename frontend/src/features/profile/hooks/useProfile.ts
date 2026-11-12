@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { profileApi } from "@/features/profile/api";
 import { profileKeys } from "@/features/profile/query-keys";
 import type { OnboardingValues, ProfileFormValues } from "@/features/profile/schemas";
-import type { PresencePreference, Profile } from "@/features/profile/types";
+import type { PresencePreference, PrivacySettings, Profile } from "@/features/profile/types";
 
 export function useMe(options: { enabled?: boolean } = {}) {
   return useQuery({
@@ -66,5 +66,20 @@ export function useSetPresence() {
         current ? { ...current, presence_preference: presence.preference } : current,
       );
     },
+  });
+}
+
+export function usePrivacy() {
+  return useQuery({
+    queryKey: profileKeys.privacy(),
+    queryFn: ({ signal }) => profileApi.getPrivacy(signal),
+  });
+}
+
+export function useUpdatePrivacy() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (changes: Partial<PrivacySettings>) => profileApi.updatePrivacy(changes),
+    onSuccess: (settings) => queryClient.setQueryData(profileKeys.privacy(), settings),
   });
 }

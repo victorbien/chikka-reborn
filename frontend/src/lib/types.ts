@@ -7,4 +7,5 @@ export type MessageChannel = "internet" | "sms-outbound" | "sms-inbound";
 /** Whether an SMS is real. Internet messages have no SMS mode. */
 export type SmsMode = "simulated" | "live";
 
-export type PresenceStatus = "online" | "away" | "offline";
+/** "unknown" means the person does not share presence. It is never shown as offline. */
+export type PresenceStatus = "online" | "away" | "busy" | "offline" | "unknown";

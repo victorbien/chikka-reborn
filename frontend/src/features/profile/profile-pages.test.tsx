@@ -101,7 +101,7 @@ describe("profile settings", () => {
     );
     const user = userEvent.setup();
     renderApp("/settings/profile");
-    const bio = await screen.findByLabelText("Bio or status message");
+    const bio = await screen.findByLabelText("Bio");
     await user.type(bio, "OFW in <b>Dubai</b>");
     await user.selectOptions(screen.getByLabelText("Interface"), "classic");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
@@ -122,7 +122,7 @@ describe("profile settings", () => {
     const name = await screen.findByLabelText("Display name");
     await user.clear(name);
     await user.type(name, "M");
-    await user.click(screen.getByLabelText("Bio or status message"));
+    await user.click(screen.getByLabelText("Bio"));
     await user.paste("x".repeat(161));
     await user.click(screen.getByRole("button", { name: "Save changes" }));
     expect(await screen.findByText("Use at most 160 characters.")).toBeInTheDocument();

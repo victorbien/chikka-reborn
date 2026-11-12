@@ -20,6 +20,7 @@ function toInput(profile: Profile): ProfileFormInput {
   return {
     display_name: profile.display_name,
     bio: profile.bio ?? "",
+    status_message: profile.status_message ?? "",
     country_code: profile.country_code ?? "",
     language: profile.language,
     time_zone: profile.time_zone,
@@ -38,6 +39,8 @@ export function ProfileForm({ profile }: { profile: Profile }) {
   const { errors, dirtyFields, isDirty } = form.formState;
   const bio = useWatch({ control: form.control, name: "bio" });
   const bioLength = plainText(bio ?? "").length;
+  const statusMessage = useWatch({ control: form.control, name: "status_message" });
+  const statusLength = plainText(statusMessage ?? "").length;
 
   const onSubmit = form.handleSubmit((values) => {
     const changes: Partial<ProfileFormValues> = {};
@@ -50,6 +53,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
         applyServerFieldErrors(error, form.setError, [
           "display_name",
           "bio",
+          "status_message",
           "country_code",
           "language",
           "time_zone",
@@ -80,11 +84,22 @@ export function ProfileForm({ profile }: { profile: Profile }) {
         <Input autoComplete="name" {...form.register("display_name")} />
       </FormField>
       <FormField
-        label="Bio or status message"
+        label="Bio"
         error={errors.bio?.message}
         hint={<span aria-live="polite">{bioLength}/160</span>}
       >
         <Textarea rows={3} {...form.register("bio")} />
+      </FormField>
+      <FormField
+        label="Status message"
+        error={errors.status_message?.message}
+        hint={
+          <span aria-live="polite">
+            Shown next to your name in your contacts' buddy lists. {statusLength}/80
+          </span>
+        }
+      >
+        <Input autoComplete="off" {...form.register("status_message")} />
       </FormField>
       <LocaleFields
         country={form.register("country_code")}

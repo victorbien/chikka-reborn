@@ -8,6 +8,7 @@ import { AvatarSection } from "@/features/profile/components/AvatarSection";
 import { OnboardingForm } from "@/features/profile/components/OnboardingForm";
 import { PhoneSection } from "@/features/profile/components/PhoneSection";
 import { PresenceSelector } from "@/features/profile/components/PresenceSelector";
+import { PrivacySection } from "@/features/profile/components/PrivacySection";
 import { ProfileForm } from "@/features/profile/components/ProfileForm";
 import { useMe } from "@/features/profile/hooks/useProfile";
 import { toUserFacingError } from "@/lib/error-handling";
@@ -74,6 +75,9 @@ export function ProfileSettingsPage() {
       </Section>
       <Section id="presence-heading" title="Status">
         <PresenceSelector profile={profile} />
+      </Section>
+      <Section id="privacy-heading" title="Privacy and discovery">
+        <PrivacySection />
       </Section>
       <Section id="phone-heading" title="Mobile number">
         <PhoneSection />
