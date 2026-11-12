@@ -127,7 +127,9 @@ curl http://localhost:8000/api/v1/health
 
 API documentation: http://localhost:8000/docs (disabled when `APP_ENV=production`).
 
-Without `DATABASE_URL` the app still starts and reports `"database":"not_configured"`. Without `SUPABASE_JWT_SECRET`, protected routes return 503 (authentication fails closed).
+Without `DATABASE_URL` the app still starts and reports `"database":"not_configured"`. Without `SUPABASE_URL` and `SUPABASE_JWT_SECRET`, protected routes return 503 (authentication fails closed). Projects on Supabase signing keys (ES256) only need `SUPABASE_URL`: the backend reads the public keys from the project JWKS endpoint.
+
+The backend reads `backend/.env` (the directory it is started from), not the repository-root `.env`.
 
 Backend auto-reloads on file changes via `--reload`.
 

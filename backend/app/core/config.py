@@ -27,7 +27,10 @@ class Settings(BaseSettings):
 
     database_url: str | None = None
     supabase_url: str | None = None
+    # Legacy shared secret: verifies HS256 access tokens.
     supabase_jwt_secret: SecretStr | None = None
+    # Public signing keys: verify ES256/RS256 access tokens. Defaults to the project's JWKS URL.
+    supabase_jwks_url: str | None = None
     # Public anon key: identifies the project to GoTrue for user-level calls.
     supabase_anon_key: SecretStr | None = None
     # Backend-only. Used for admin calls (ban user) and Storage writes. Never sent to the browser.
@@ -67,6 +70,7 @@ class Settings(BaseSettings):
         "database_url",
         "supabase_url",
         "supabase_jwt_secret",
+        "supabase_jwks_url",
         "supabase_anon_key",
         "supabase_service_role_key",
         "app_secret_key",
@@ -113,6 +117,18 @@ class Settings(BaseSettings):
         if self.cookie_secure is not None:
             return self.cookie_secure
         return self.app_env in ("staging", "production")
+
+    @property
+    def auth_issuer(self) -> str | None:
+        """The `iss` claim Supabase Auth puts in this project's access tokens."""
+        return f"{self.supabase_url.rstrip('/')}/auth/v1" if self.supabase_url else None
+
+    @property
+    def jwks_url(self) -> str | None:
+        if self.supabase_jwks_url:
+            return self.supabase_jwks_url
+        issuer = self.auth_issuer
+        return f"{issuer}/.well-known/jwks.json" if issuer else None
 
     @property
     def sms_mode(self) -> Literal["simulation", "live"]:

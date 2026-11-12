@@ -4,6 +4,7 @@ from typing import Annotated, Protocol
 from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.api.container import Providers
 from app.core.config import Settings, get_settings
@@ -215,7 +216,8 @@ async def get_current_user(
     The identity comes only from the verified token; user ids in paths or bodies are never
     used as proof of who is calling.
     """
-    claims = decode_access_token(token, settings)
+    # In a worker thread: verifying an ES256/RS256 token can fetch the JWKS over the network.
+    claims = await run_in_threadpool(decode_access_token, token, settings)
     return await lookup.resolve(claims)
 
 

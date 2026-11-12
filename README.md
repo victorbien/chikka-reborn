@@ -169,7 +169,7 @@ scripts\check.ps1            # lint, format, types, tests, build for both apps
 scripts\e2e-local.ps1        # real processes end to end: PGlite, fake Supabase, API, frontend client
 ```
 
-Sign-in needs Supabase Auth: set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET` (and `SUPABASE_SERVICE_ROLE_KEY` for photos and account deletion) in `backend/.env`, and use the email templates in `supabase/templates/` so links come back to the app. Mobile verification runs in simulation: no text message is sent and the code appears in a panel labelled SIMULATED.
+Sign-in needs Supabase Auth: set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET` (only for projects on the legacy HS256 secret; signing-key projects are verified through their JWKS) (and `SUPABASE_SERVICE_ROLE_KEY` for photos and account deletion) in `backend/.env`, and use the email templates in `supabase/templates/` so links come back to the app. Mobile verification runs in simulation: no text message is sent and the code appears in a panel labelled SIMULATED.
 
 Full guide: [docs/deployment/local-development.md](docs/deployment/local-development.md). Per-app guides: [backend/README.md](backend/README.md), [frontend/README.md](frontend/README.md).
 

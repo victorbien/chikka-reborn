@@ -6,6 +6,8 @@ email-validator==2.3.0
 sqlalchemy[asyncio]==2.1.8
 asyncpg==0.32.0
 pyjwt==2.15.1
+# PyJWT's backend for ES256/RS256: Supabase projects on asymmetric signing keys (ADL in decision log).
+cryptography==50.0.2
 httpx==0.28.1
 python-multipart==0.0.33
 pillow==13.0.0

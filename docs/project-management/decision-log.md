@@ -141,6 +141,15 @@ These decisions are blocking or will block phase starts. Each has a `Due By` dat
 
 ---
 
+### DEC-ARCH-017 — Verify Supabase Access Tokens Through JWKS
+
+**Status:** Recorded. **Phase:** 1. **Related:** FR-AUTH-006, security-architecture.
+
+- **Context:** New Supabase projects sign access tokens with asymmetric signing keys (ES256). The backend only accepted HS256 with the legacy shared secret, so every authenticated request from such a project failed with 401.
+- **Decision:** Choose the key by the token's algorithm. HS256 uses only `SUPABASE_JWT_SECRET`. ES256/RS256 use only the project's published public keys (`SUPABASE_URL/auth/v1/.well-known/jwks.json`, overridable with `SUPABASE_JWKS_URL`) and must carry the project's issuer. Any other algorithm, including `none`, is rejected. Keys are cached for 10 minutes; an unknown key id triggers a refetch, so key rotation works. An unreachable key endpoint returns 503, not 401.
+- **New dependency:** `cryptography==50.0.2`, PyJWT's standard backend for ES256/RS256. No alternative avoids it short of hand-written crypto.
+- **Consequences:** Verification may make a network call on a cold cache, so it runs in a worker thread. HS256 support stays for legacy projects and the test suite.
+- **Alternatives considered:** Calling Supabase `GET /auth/v1/user` on every request (adds a network round trip per request); requiring projects to stay on the legacy secret (Supabase is phasing it out).
 ### DEC-PROD-001 — SMS Simulation Mode is the Default
 **Date:** November 2026  
 **Status:** ✅ Decided  

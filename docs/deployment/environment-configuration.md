@@ -48,7 +48,8 @@ All three environments: development, staging, production.
 |---|---|---|
 | `SUPABASE_URL` | Supabase project API URL | `https://xxx.supabase.co` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Backend service role key — bypasses RLS | `eyJhbGci...` |
-| `SUPABASE_JWT_SECRET` | Used to verify Supabase JWTs in FastAPI | `super-secret-...` |
+| `SUPABASE_JWT_SECRET` | Legacy shared secret; verifies HS256 access tokens. Optional on projects using signing keys | `super-secret-...` |
+| `SUPABASE_JWKS_URL` | Optional. Public keys for ES256/RS256 access tokens. Defaults to `SUPABASE_URL/auth/v1/.well-known/jwks.json` | `https://xxx.supabase.co/auth/v1/.well-known/jwks.json` |
 | `SMS_PROVIDER_MODE` | `mock` or `live` | `mock` |
 | `LOG_LEVEL` | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`) | `INFO` |
 | `APP_ENV` | `development`, `test`, `staging` or `production`. API docs are disabled in `production` | `development` |
