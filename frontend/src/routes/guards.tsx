@@ -4,7 +4,7 @@ import { Avatar } from "@/components/shared/Avatar";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { PageLoader } from "@/components/common/PageLoader";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { MAIN_NAV_ITEMS, PUBLIC_NAV_ITEMS } from "@/components/navigation/MainNav";
+import { ADMIN_NAV_ITEMS, MAIN_NAV_ITEMS, PUBLIC_NAV_ITEMS } from "@/components/navigation/MainNav";
 import { SignOutButton } from "@/features/auth/components/SignOutButton";
 import { ChatRealtimeBridge } from "@/features/chat/components/ChatRealtimeBridge";
 import { usePresence } from "@/features/profile/hooks/usePresenceHeartbeat";
@@ -92,7 +92,9 @@ export function SignedInAppLayout() {
     <RealtimeProvider enabled={me.data?.status === "active" && me.data.onboarding_completed}>
       <ChatRealtimeBridge />
       <AppLayout
-        navItems={MAIN_NAV_ITEMS}
+        navItems={
+          me.data?.role === "admin" ? [...MAIN_NAV_ITEMS, ...ADMIN_NAV_ITEMS] : MAIN_NAV_ITEMS
+        }
         headerActions={
           me.data ? (
             <>

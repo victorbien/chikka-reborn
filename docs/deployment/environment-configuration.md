@@ -68,12 +68,25 @@ All three environments: development, staging, production.
 | Variable | Description |
 |---|---|
 | `TWILIO_ACCOUNT_SID` | Twilio account identifier |
-| `TWILIO_AUTH_TOKEN` | Twilio API authentication token |
-| `TWILIO_PHONE_NUMBER` | Platform's outbound Twilio number (E.164) |
-| `TWILIO_WEBHOOK_SECRET` | Signing secret for validating Twilio webhooks |
+| `TWILIO_AUTH_TOKEN` | Twilio API auth token. Also the key that signs Twilio webhooks, so there is no separate webhook secret |
+| `SMS_PUBLIC_BASE_URL` | Public HTTPS origin of this backend (for example `https://api.example.com`). Twilio signs the exact URL it calls, so the signature check uses this value, never the `Host` header |
 
-These variables are validated at startup when `SMS_PROVIDER_MODE=live`. The application fails to start without them if live mode is configured.
+Sender numbers are not environment variables. They are non-secret settings stored on the provider row (`provider_configurations.settings.sender_numbers`) and edited by administrators. Sending also needs, per country, a capability row marked `supported` with recorded verification, a configured price, and (for the Philippines) an approved sender registration. See [sms-live-activation.md](sms-live-activation.md).
 
+These variables are validated at startup when `SMS_PROVIDER_MODE=live`. The application fails to start without them. It never falls back to simulation.
+
+### Optional — SMS subsystem
+
+| Variable | Default | Description |
+|---|---|---|
+| `SMS_MOCK_WEBHOOK_SECRET` | random per process | Key for the simulation's webhook signer. Set it when several instances share one simulation |
+| `SMS_WORKER_ENABLED` | `true` | Runs the in-process worker (dispatch, retries, reconciliation, simulated callbacks). Tests turn it off |
+| `SMS_WORKER_POLL_SECONDS` | `1` | How often the worker looks for due work when nothing wakes it |
+| `SMS_AMBIGUOUS_WINDOW_SECONDS` | `900` | How long a message with an unknown outcome waits for proof before it is marked failed |
+| `SMS_QUEUE_MAX_AGE_SECONDS` | `86400` | A message still queued after this long (for example during a provider outage) is marked failed |
+| `SMS_ATTESTATION_VERSION` | `2026-11-01` | Version of the sender-permission wording recorded with each consent |
+
+Retry attempts, backoff and rate limits are not environment variables: they live in `provider_configurations` and `system_settings` so administrators can change them (`max_retry_attempts`, `retry_base_seconds`, `retry_cap_seconds`, `sms_user_limit_per_hour`, `sms_recipient_limit_per_hour`).
 ### Required — AI Features (Phase 3+)
 
 | Variable | Description |
@@ -90,10 +103,7 @@ These variables are validated at startup when `SMS_PROVIDER_MODE=live`. The appl
 | `DB_POOL_SIZE` | `10` | SQLAlchemy connection pool size (1-50) |
 | `DB_MAX_OVERFLOW` | `20` | Pool overflow connections |
 | `RATE_LIMIT_LOGIN` | `5` | Max failed logins per 15 min per IP |
-| `RATE_LIMIT_SMS_DAILY` | `500` | Max SMS sends per user per day |
 | `RATE_LIMIT_AI_HOURLY` | `50` | Max AI requests per user per hour |
-| `SMS_MAX_RETRIES` | `3` | Max SMS retry attempts before permanently_failed |
-| `SMS_RETRY_BASE_DELAY_S` | `30` | Base retry delay in seconds |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed CORS origins |
 
 ---
@@ -134,8 +144,7 @@ SMS_PROVIDER_MODE=mock
 # Required only when SMS_PROVIDER_MODE=live:
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
-TWILIO_PHONE_NUMBER=
-TWILIO_WEBHOOK_SECRET=
+SMS_PUBLIC_BASE_URL=
 
 # ─── AI (Phase 3+) ───────────────────────────────────────────
 AWS_REGION=us-east-1
@@ -148,7 +157,6 @@ LOG_LEVEL=DEBUG
 CORS_ORIGINS=http://localhost:5173
 DB_POOL_SIZE=5
 RATE_LIMIT_LOGIN=5
-RATE_LIMIT_SMS_DAILY=500
 RATE_LIMIT_AI_HOURLY=50
 ```
 
@@ -197,7 +205,7 @@ This prevents the application from running in a silently broken state.
 | `SUPABASE_SERVICE_ROLE_KEY` | Team member departure; suspected exposure | Rotate in Supabase dashboard; update hosting env var |
 | `SUPABASE_JWT_SECRET` | Suspected compromise | Rotate in Supabase dashboard; update backend env var; all sessions invalidated |
 | `TWILIO_AUTH_TOKEN` | Annually; suspected exposure | Rotate in Twilio console; update hosting env var |
-| `TWILIO_WEBHOOK_SECRET` | Annually; provider allows rotation | Rotate in Twilio console; update hosting env var |
+| `TWILIO_AUTH_TOKEN` (also signs webhooks) | Annually, or at once if exposed | Rotate in the Twilio console; update the hosting env var; restart. Webhooks signed with the old token fail until then |
 | `AWS_ACCESS_KEY_ID` / `SECRET` | Quarterly; team member departure | Rotate in IAM; update hosting env var |
 
 ---

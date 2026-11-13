@@ -3,6 +3,7 @@ import {
   Check,
   CheckCheck,
   Clock,
+  RefreshCw,
   Send,
   XCircle,
   type LucideIcon,
@@ -13,6 +14,7 @@ import type { MessageChannel, MessageStatus } from "@/lib/types";
 const STATUSES: Record<MessageStatus, { label: string; Icon: LucideIcon; tone: string }> = {
   pending: { label: "Sending", Icon: Clock, tone: "text-fg-muted" },
   queued: { label: "Queued", Icon: Clock, tone: "text-fg-muted" },
+  retrying: { label: "Retrying", Icon: RefreshCw, tone: "text-fg-muted" },
   accepted: { label: "Accepted by provider", Icon: Send, tone: "text-fg-muted" },
   sent: { label: "Sent", Icon: Check, tone: "text-fg-muted" },
   delivered: { label: "Delivered", Icon: CheckCheck, tone: "text-fg-muted" },

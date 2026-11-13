@@ -76,6 +76,11 @@ class RateLimitedError(AppError):
         )
 
 
+class PayloadTooLargeError(AppError):
+    status_code = 413
+    code = "payload_too_large"
+
+
 class ServiceUnavailableError(AppError):
     status_code = 503
     code = "service_unavailable"

@@ -171,6 +171,14 @@ function DrawerBody({ contact, onClose }: { contact: ContactDetail; onClose: () 
             </Link>
           </Button>
         ) : null}
+        {isSms ? (
+          <Button asChild>
+            <Link to={`${paths.smsNew}?contact=${encodeURIComponent(contact.id)}`}>
+              <MessageCircle aria-hidden className="size-4" />
+              Send SMS
+            </Link>
+          </Button>
+        ) : null}
         <Button
           variant="secondary"
           aria-pressed={contact.is_favourite}

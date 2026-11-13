@@ -136,9 +136,18 @@ def test_provider_selection_follows_configuration() -> None:
     assert bare.otp.mode == "simulated"
 
     live = build_providers(
-        Settings(_env_file=None, sms_provider_mode="live", sms_live_confirmed=True)  # type: ignore[call-arg]
+        Settings(  # type: ignore[call-arg]
+            _env_file=None,
+            sms_provider_mode="live",
+            sms_live_confirmed=True,
+            twilio_account_sid="ACfake",
+            twilio_auth_token="fake-token",
+            sms_public_base_url="https://api.example.test",
+        )
     )
     assert isinstance(live.otp, UnavailableLiveOtpDelivery)
+    assert live.sms is not None
+    assert live.sms.name == "twilio"
 
 
 @pytest.mark.parametrize(

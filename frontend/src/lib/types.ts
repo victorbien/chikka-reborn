@@ -2,7 +2,15 @@
 /** "pending" exists only on the sender's device before the server stores the message.
  *  "read" applies to Chikka messages only, and only when both people allow read receipts. */
 export type MessageStatus =
-  "pending" | "queued" | "accepted" | "sent" | "delivered" | "read" | "failed" | "undelivered";
+  | "pending"
+  | "queued"
+  | "retrying"
+  | "accepted"
+  | "sent"
+  | "delivered"
+  | "read"
+  | "failed"
+  | "undelivered";
 
 /** How a message travels. Every bubble and the composer must show one. */
 export type MessageChannel = "internet" | "sms-outbound" | "sms-inbound";

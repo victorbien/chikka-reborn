@@ -3,7 +3,7 @@
 **Document:** CHKR-ARCH-011  
 **Project:** Chikka Reborn  
 **Version:** 0.1  
-**Status:** Proposed — awaiting review  
+**Status:** Implemented in Phase 2. Deviations and decisions are recorded in DEC-SMS-001 (decision log); the API as built is in `docs/api/sms-api.md`  
 **Last Revised:** November 2026  
 
 ---

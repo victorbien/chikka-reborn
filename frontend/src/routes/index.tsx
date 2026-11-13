@@ -16,12 +16,14 @@ import {
   RequireOnboarded,
   SignedInAppLayout,
 } from "@/routes/guards";
+import { AdminSmsPage } from "@/routes/AdminSmsPage";
 import { ContactsPage } from "@/routes/ContactsPage";
 import { HomePage } from "@/routes/HomePage";
 import { MessagesPage, NewConversationPage } from "@/routes/MessagesPage";
 import { NotFoundPage } from "@/routes/NotFoundPage";
 import { ProfileSettingsPage, ProfileSetupPage } from "@/routes/ProfilePages";
 import { RouteErrorPage } from "@/routes/RouteErrorPage";
+import { SmsPage } from "@/routes/SmsPage";
 import { StyleGuide } from "@/routes/StyleGuide";
 
 export const appRoutes: RouteObject[] = [
@@ -63,6 +65,13 @@ export const appRoutes: RouteObject[] = [
                   { path: paths.newMessage, element: <NewConversationPage /> },
                   { path: paths.messages, element: <MessagesPage /> },
                   { path: `${paths.messages}/:conversationId`, element: <MessagesPage /> },
+                  { path: paths.sms, element: <SmsPage mode="list" /> },
+                  { path: paths.smsNew, element: <SmsPage mode="new" /> },
+                  {
+                    path: `${paths.sms}/:conversationId`,
+                    element: <SmsPage mode="conversation" />,
+                  },
+                  { path: paths.adminSms, element: <AdminSmsPage /> },
                   { path: paths.settings, element: <ProfileSettingsPage /> },
                 ],
               },

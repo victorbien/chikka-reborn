@@ -35,7 +35,8 @@ export function estimateSms(body: string): SmsEstimate {
       perSegment: single ? 160 : 153,
     };
   }
-  const characters = Array.from(body).length;
+  // Unicode segments count UTF-16 code units: characters outside the BMP (most emoji) cost two.
+  const characters = body.length;
   const single = characters <= 70;
   return {
     characters,

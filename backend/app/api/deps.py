@@ -8,7 +8,11 @@ from starlette.concurrency import run_in_threadpool
 
 from app.api.container import Providers
 from app.core.config import Settings, get_settings
-from app.core.exceptions import AuthenticationError, PermissionDeniedError
+from app.core.exceptions import (
+    AuthenticationError,
+    PermissionDeniedError,
+    ServiceUnavailableError,
+)
 from app.core.security import AuthenticatedUser, TokenClaims, decode_access_token
 from app.database.session import Database, require_database, session_scope
 from app.modules.audit.service import AuditLogger
@@ -19,6 +23,9 @@ from app.modules.chat.service import ChatService
 from app.modules.contacts.service import ContactService
 from app.modules.profiles.service import ProfileService
 from app.modules.rate_limits.service import RateLimiter
+from app.modules.sms.admin_service import AdminSmsService
+from app.modules.sms.gateway import SmsGateway
+from app.modules.sms.service import SmsService
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
@@ -196,6 +203,54 @@ def get_chat_service(
 
 
 ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
+
+
+def get_sms_gateway(request: Request) -> SmsGateway:
+    """The running SMS engine. Absent only when no database is configured."""
+    gateway: SmsGateway | None = getattr(request.app.state, "sms_gateway", None)
+    if gateway is None:
+        raise ServiceUnavailableError(
+            "SMS is unavailable right now.", details={"reason": "sms_not_running"}
+        )
+    return gateway
+
+
+SmsGatewayDep = Annotated[SmsGateway, Depends(get_sms_gateway)]
+
+
+def get_sms_service(
+    settings: SettingsDep,
+    database: RequiredDatabaseDep,
+    gateway: SmsGatewayDep,
+    providers: ProvidersDep,
+    limiter: RateLimiterDep,
+    audit: AuditLoggerDep,
+) -> SmsService:
+    return SmsService(
+        settings=settings,
+        database=database,
+        provider=gateway.provider,
+        limiter=limiter,
+        audit=audit,
+        hub=providers.realtime,
+        wake=gateway.worker.wake,
+        clock=providers.clock,
+    )
+
+
+SmsServiceDep = Annotated[SmsService, Depends(get_sms_service)]
+
+
+def get_sms_admin_service(
+    settings: SettingsDep,
+    database: RequiredDatabaseDep,
+    gateway: SmsGatewayDep,
+    audit: AuditLoggerDep,
+) -> AdminSmsService:
+    return AdminSmsService(settings=settings, database=database, gateway=gateway, audit=audit)
+
+
+SmsAdminServiceDep = Annotated[AdminSmsService, Depends(get_sms_admin_service)]
 AccountServiceDep = Annotated[AccountService, Depends(get_account_service)]
 PhoneServiceDep = Annotated[PhoneVerificationService, Depends(get_phone_service)]
 ProfileServiceDep = Annotated[ProfileService, Depends(get_profile_service)]

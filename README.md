@@ -135,16 +135,22 @@ chikka-reborn/
 
 ## SMS Modes
 
-### Simulation Mode
-Uses `MockSmsProvider`. No real SMS is sent. All simulated messages are clearly labelled. Supports error and retry scenarios. No cost incurred.
+The backend runs in exactly one SMS mode, chosen at startup by `SMS_PROVIDER_MODE`. Both modes use the same code from webhook intake onward and the same status vocabulary.
+
+### Simulation Mode (default)
+Uses `MockSmsProvider`. No real SMS is sent and nothing costs money. Every simulated message and status carries a visible SIMULATED label, and simulated delivery is never presented as carrier delivery. Reserved fictional numbers trigger failures, retries, delays, duplicates and unknown outcomes. Replies are injected through the real signed webhook path from the administration page. See [Local development](docs/deployment/local-development.md#7-trying-sms-locally-simulation).
 
 ### Live Mode
-Uses a real configured provider (e.g. Twilio). Real messages are sent and received. Webhook signatures are validated. Delivery status is tracked per provider event, not by acceptance alone.
+Uses `TwilioSmsProvider`. Real messages go to real phones. Live mode needs `SMS_LIVE_CONFIRMED=true`, Twilio credentials and a public URL, plus an administrator's per-environment confirmation, a verified route for each destination country and, in the Philippines, an approved sender registration. Webhook signatures are verified on the raw request before anything is processed. If live cannot start, the server refuses to start; it never falls back to simulation. The checklist is in [Live SMS activation](docs/deployment/sms-live-activation.md).
 
-> The application never claims a message was delivered merely because the provider accepted it.
+> The application never claims a message was delivered merely because the provider accepted it. Statuses are `queued`, `retrying`, `accepted`, `sent`, `delivered`, `undelivered` and `failed`, and only a provider delivery confirmation sets `delivered`.
+
+### Replies and unmatched messages
+A reply is routed by the pair (our sender number, the sender's number), which one user holds at a time for 30 days after their last message. A valid reply that matches no route is never dropped and never shown to anyone: it is kept (masked) in an administrator queue for at least 90 days, with no automatic reply. STOP-style keywords opt a number out for every user until the recipient replies START.
+
+Run the SMS tests with `pytest tests/flows/test_sms.py tests/flows/test_sms_live.py` in `backend` (no network; Twilio is replaced by an in-process fake). Details: [SMS API](docs/api/sms-api.md) and [SMS gateway design](docs/architecture/sms-gateway-design.md).
 
 ---
-
 ## AI Assistant
 
 The AI assistant (powered by Amazon Bedrock) supports smart replies, translation, tone adjustment, rewriting, conversation summaries, and SMS length optimisation.

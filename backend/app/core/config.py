@@ -53,6 +53,21 @@ class Settings(BaseSettings):
     sms_provider_mode: SmsProviderMode = "mock"
     sms_live_confirmed: bool = False
 
+    # Live SMS (Twilio). Credentials are backend-only and never sent to the browser or logged.
+    twilio_account_sid: str | None = None
+    twilio_auth_token: SecretStr | None = None
+    # Public HTTPS origin of this backend. Twilio signs the exact URL it calls, so the webhook
+    # signature URL is built from this value and never from request headers.
+    sms_public_base_url: str | None = None
+    # Keys the simulation signer. A random per-process value is used when unset.
+    sms_mock_webhook_secret: SecretStr | None = None
+    # Background worker: dispatch, retries, reconciliation, simulated callbacks.
+    sms_worker_enabled: bool = True
+    sms_worker_poll_seconds: float = Field(default=1.0, gt=0, le=60)
+    sms_ambiguous_window_seconds: int = Field(default=900, ge=1)
+    sms_queue_max_age_seconds: int = Field(default=86400, ge=60)
+    sms_attestation_version: str = "2026-11-01"
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_origins(cls, value: object) -> object:
@@ -76,6 +91,10 @@ class Settings(BaseSettings):
         "supabase_service_role_key",
         "app_secret_key",
         "cookie_secure",
+        "twilio_account_sid",
+        "twilio_auth_token",
+        "sms_public_base_url",
+        "sms_mock_webhook_secret",
         mode="before",
     )
     @classmethod
@@ -102,6 +121,23 @@ class Settings(BaseSettings):
         # Never fall back silently: live mode needs an explicit operator opt-in.
         if self.sms_provider_mode == "live" and not self.sms_live_confirmed:
             raise ValueError("SMS_PROVIDER_MODE=live requires SMS_LIVE_CONFIRMED=true")
+        return self
+
+    @model_validator(mode="after")
+    def _live_sms_requires_credentials(self) -> Self:
+        # Fail at startup, loudly, rather than discovering missing credentials on first send.
+        if self.sms_provider_mode == "live":
+            missing = [
+                name
+                for name, value in (
+                    ("TWILIO_ACCOUNT_SID", self.twilio_account_sid),
+                    ("TWILIO_AUTH_TOKEN", self.twilio_auth_token),
+                    ("SMS_PUBLIC_BASE_URL", self.sms_public_base_url),
+                )
+                if value is None
+            ]
+            if missing:
+                raise ValueError("SMS_PROVIDER_MODE=live requires " + ", ".join(missing))
         return self
 
     @model_validator(mode="after")

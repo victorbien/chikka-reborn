@@ -227,26 +227,42 @@ PLAYWRIGHT_BASE_URL=https://staging.chikka-reborn.app npx playwright test
 
 ---
 
-## 7. Simulating Inbound SMS Locally
+## 7. Trying SMS Locally (Simulation)
 
-Since no real SMS webhook arrives during local development, use the simulation endpoint:
+Simulation needs no account and sends nothing. The backend runs a worker that dispatches queued messages and produces signed delivery callbacks through the real webhook path.
+
+1. Sign in, then verify a mobile number in **Settings** (the code appears in the simulated inbox on that page).
+2. Open **SMS**, then **New SMS**. Pick a country and type a number. Use a fictional number from the table below to choose the outcome.
+3. Tick the permission box, review, and send. Watch the status go `queued`, `accepted`, `sent`, `delivered` over about six seconds. Every message carries a SIMULATED label.
+4. To reply as the recipient, sign in as an administrator (set `role = 'admin'` on your profile) and open **SMS administration** -> **Simulate a reply**. Use the number you texted as *From* and the conversation's sender number as *To* (the sender numbers are listed under Providers). The reply appears in the same conversation.
+
+Fictional destination numbers (the NANP `555-01xx` range is reserved for fiction) choose what the simulation does:
+
+| Number | Scenario |
+|---|---|
+| any other number | `delivered` (accepted, then sent after 3 s, delivered after 6 s) |
+| `+12025550101` | `failed` (provider reports failure after acceptance) |
+| `+12025550102` | `undelivered` |
+| `+12025550103` | `transient_error_then_success` (first attempt fails, the retry works) |
+| `+12025550104` | `transient_error_always` (retries stop at the attempt limit) |
+| `+12025550105` | `permanent_error` (invalid number, never retried) |
+| `+12025550106` | `delayed_delivery` (delivered after 10 minutes) |
+| `+12025550107` | `no_receipt` (stays `sent`, "delivery not confirmed") |
+| `+12025550108` | `duplicate_callback` |
+| `+12025550109` | `out_of_order` (delivered arrives before sent) |
+| `+12025550110` | `ambiguous_timeout` (unknown outcome, never resent) |
+
+The same simulated reply from a script (administrator token and simulation mode required; refused in production):
 
 ```powershell
-# Requires: admin JWT token + simulation mode
-curl -X POST http://localhost:8000/api/v1/sms/simulate/inbound \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "from_phone": "+639171234567",
-    "to_number": "+14155551234",
-    "body": "Maayos naman! Salamat."
-  }'
+curl -X POST http://localhost:8000/api/v1/admin/sms/simulate/inbound `
+  -H "Authorization: Bearer <admin-token>" -H "Content-Type: application/json" `
+  -d '{"from_phone": "+12025550142", "to_number": "+12025550190", "body": "Maayos naman! Salamat."}'
 ```
 
-This triggers the full inbound SMS processing flow including Realtime push to the browser.
+Add `"replay_id": "SIM-IN-1"` and send it twice to see duplicate handling: the second call reports `duplicate: true` and changes nothing.
 
 ---
-
 ## 8. Development Workflow
 
 ```

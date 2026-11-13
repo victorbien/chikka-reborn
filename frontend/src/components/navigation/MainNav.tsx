@@ -17,10 +17,14 @@ export const PUBLIC_NAV_ITEMS: readonly NavItem[] = [
 export const MAIN_NAV_ITEMS: readonly NavItem[] = [
   { to: paths.home, label: "Home" },
   { to: paths.messages, label: "Messages" },
+  { to: paths.sms, label: "SMS" },
   { to: paths.contacts, label: "Contacts" },
   { to: paths.settings, label: "Settings" },
   { to: paths.styleGuide, label: "Style guide" },
 ];
+
+/** Shown to administrators in addition to the main items. */
+export const ADMIN_NAV_ITEMS: readonly NavItem[] = [{ to: paths.adminSms, label: "SMS admin" }];
 
 export function MainNav({ items = MAIN_NAV_ITEMS }: { items?: readonly NavItem[] }) {
   return (

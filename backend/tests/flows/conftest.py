@@ -10,13 +10,15 @@ Skipped (not failed) when Node.js or the database tools are not installed.
 
 import asyncio
 import queue
+import random
 import shutil
 import socket
 import subprocess
 import threading
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -29,8 +31,11 @@ from app.api.container import Providers
 from app.core.config import Settings
 from app.integrations.auth_provider import SupabaseAuthProvider
 from app.integrations.otp_delivery import SimulatedInbox, SimulatedOtpDelivery
+from app.integrations.sms.base import SmsProvider
+from app.integrations.sms.mock import MockSmsProvider
 from app.integrations.storage_provider import SupabaseStorageProvider
 from app.main import create_app
+from app.modules.sms.gateway import SmsGateway
 from tests.conftest import TEST_JWT_SECRET
 from tests.support.fake_supabase import FakeSupabase
 
@@ -39,6 +44,20 @@ FAKE_BASE = "http://fake-supabase.test"
 ANON_KEY = "test-anon-key"
 SERVICE_KEY = "test-service-role-key"
 PASSWORD = "Correct-Horse-7"
+MOCK_WEBHOOK_SECRET = "test-only-mock-webhook-secret"
+
+
+class FakeClock:
+    """Shared by the SMS provider, engine and service so retries and timelines are exact."""
+
+    def __init__(self) -> None:
+        self.now = datetime.now(UTC)
+
+    def __call__(self) -> datetime:
+        return self.now
+
+    def advance(self, seconds: float) -> None:
+        self.now += timedelta(seconds=seconds)
 
 
 def _free_port_pair() -> int:
@@ -115,6 +134,13 @@ class Harness:
     inbox: SimulatedInbox
     settings: Settings
     database_url: str
+    clock: FakeClock
+    sms: MockSmsProvider
+    gateway: SmsGateway
+
+    def run_worker(self) -> int:
+        """One deterministic pass of the SMS worker (the background loop is off in tests)."""
+        return int(self.client.portal.call(self.gateway.worker.run_once))  # type: ignore[union-attr]
 
     # -- database access for assertions ------------------------------------------------
 
@@ -170,11 +196,36 @@ class Harness:
         return str(self.client.get("/api/v1/users/me", headers=headers).json()["data"]["id"])
 
 
-@pytest.fixture
-def harness(database_url: str) -> Iterator[Harness]:
+def reset_sms_state(database_url: str) -> None:
+    """Shared fixtures start clean: counters, reply routes, opt-outs, the active provider."""
     # Rate-limit counters are shared by every test client (same address); start clean.
     asyncio.run(_sql(database_url, "delete from public.rate_limit_counters"))
+    # Reply routes and opt-outs are keyed by shared fictional numbers.
+    asyncio.run(
+        _sql(
+            database_url,
+            "update public.sms_routes set status = 'released', released_at = now(), "
+            "release_reason = 'test' where status = 'active'",
+        )
+    )
+    asyncio.run(_sql(database_url, "delete from public.sms_opt_outs"))
+    # Provider rows are shared across tests: the simulation is the default.
+    asyncio.run(_sql(database_url, "update public.provider_configurations set is_active = false"))
+    asyncio.run(
+        _sql(
+            database_url,
+            "update public.provider_configurations set is_active = true where provider = 'mock'",
+        )
+    )
 
+
+def build_harness(
+    database_url: str,
+    *,
+    provider_factory: Callable[[FakeClock], SmsProvider] | None = None,
+    settings_extra: dict[str, Any] | None = None,
+) -> Iterator[Harness]:
+    reset_sms_state(database_url)
     settings = Settings(
         _env_file=None,  # type: ignore[call-arg]
         app_env="test",
@@ -186,6 +237,15 @@ def harness(database_url: str) -> Iterator[Harness]:
         supabase_service_role_key=SERVICE_KEY,  # type: ignore[arg-type]
         supabase_jwt_secret=TEST_JWT_SECRET,  # type: ignore[arg-type]
         app_secret_key="test-only-app-secret-key-0123456789",  # type: ignore[arg-type]
+        sms_mock_webhook_secret=MOCK_WEBHOOK_SECRET,  # type: ignore[arg-type]
+        sms_worker_enabled=False,
+        **{"sms_public_base_url": "https://api.example.test", **(settings_extra or {})},
+    )
+    clock = FakeClock()
+    sms: SmsProvider = (
+        provider_factory(clock)
+        if provider_factory
+        else MockSmsProvider(secret=MOCK_WEBHOOK_SECRET, clock=clock)
     )
     fake = FakeSupabase(
         database_url=settings.database_url or "",
@@ -216,11 +276,26 @@ def harness(database_url: str) -> Iterator[Harness]:
             bucket="message-attachments",
             client=httpx.AsyncClient(transport=transport),
         ),
+        sms=sms,
+        clock=clock,
+        rng=random.Random(1234),
     )
     app = create_app(settings, providers=providers)
     with TestClient(app, raise_server_exceptions=False) as client:
         yield Harness(
-            client=client, fake=fake, inbox=inbox, settings=settings, database_url=database_url
+            client=client,
+            fake=fake,
+            inbox=inbox,
+            settings=settings,
+            database_url=database_url,
+            clock=clock,
+            sms=sms,  # type: ignore[arg-type]
+            gateway=app.state.sms_gateway,
         )
         client.portal.call(providers.aclose)  # type: ignore[union-attr]
         client.portal.call(fake.aclose)  # type: ignore[union-attr]
+
+
+@pytest.fixture
+def harness(database_url: str) -> Iterator[Harness]:
+    yield from build_harness(database_url)

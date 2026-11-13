@@ -11,5 +11,8 @@ export const paths = {
   contacts: "/contacts",
   messages: "/messages",
   newMessage: "/messages/new",
+  sms: "/sms",
+  smsNew: "/sms/new",
+  adminSms: "/admin/sms",
   settings: "/settings/profile",
 } as const;

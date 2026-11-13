@@ -45,7 +45,16 @@ def test_non_postgres_database_url_is_rejected() -> None:
 def test_live_sms_requires_explicit_confirmation() -> None:
     with pytest.raises(ValidationError, match="SMS_LIVE_CONFIRMED"):
         make(sms_provider_mode="live")
-    assert make(sms_provider_mode="live", sms_live_confirmed=True).sms_mode == "live"
+    with pytest.raises(ValidationError, match="TWILIO_ACCOUNT_SID"):
+        make(sms_provider_mode="live", sms_live_confirmed=True)
+    live = make(
+        sms_provider_mode="live",
+        sms_live_confirmed=True,
+        twilio_account_sid="ACfake",
+        twilio_auth_token="fake-token",
+        sms_public_base_url="https://api.example.test",
+    )
+    assert live.sms_mode == "live"
 
 
 def test_docs_are_disabled_in_production() -> None:

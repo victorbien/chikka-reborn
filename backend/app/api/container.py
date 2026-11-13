@@ -4,7 +4,10 @@ Selection happens here and nowhere else. Missing configuration yields an "unconf
 provider that fails loudly; live SMS never silently becomes simulation.
 """
 
+import random
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
 from app.core.config import Settings
 from app.integrations.auth_provider import (
@@ -18,6 +21,8 @@ from app.integrations.otp_delivery import (
     SimulatedOtpDelivery,
     UnavailableLiveOtpDelivery,
 )
+from app.integrations.sms.base import SmsProvider
+from app.integrations.sms.factory import build_sms_provider
 from app.integrations.storage_provider import (
     StorageProvider,
     SupabaseStorageProvider,
@@ -37,9 +42,16 @@ class Providers:
     # Message attachments live in their own private bucket.
     attachment_storage: StorageProvider = field(default_factory=UnconfiguredStorageProvider)
     realtime: RealtimeHub = field(default_factory=RealtimeHub)
+    # Chosen once from configuration (integrations/sms/factory.py). None means "build from
+    # settings"; create_app fills it in, so a live failure surfaces at startup.
+    sms: SmsProvider | None = None
+    # Time source for the SMS subsystem. Tests replace it so retries and timelines are exact.
+    clock: Callable[[], datetime] = lambda: datetime.now(UTC)
+    # Seeded in tests so retry jitter is deterministic.
+    rng: random.Random | None = None
 
     async def aclose(self) -> None:
-        for provider in (self.auth, self.storage, self.attachment_storage):
+        for provider in (self.auth, self.storage, self.attachment_storage, self.sms):
             close = getattr(provider, "aclose", None)
             if close is not None:
                 await close()
@@ -86,5 +98,10 @@ def build_providers(settings: Settings) -> Providers:
         else UnavailableLiveOtpDelivery()
     )
     return Providers(
-        auth=auth, storage=storage, otp=otp, inbox=inbox, attachment_storage=attachment_storage
+        auth=auth,
+        storage=storage,
+        otp=otp,
+        inbox=inbox,
+        attachment_storage=attachment_storage,
+        sms=build_sms_provider(settings),
     )

@@ -13,6 +13,8 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import register_middleware
 from app.database.session import build_database
+from app.integrations.sms.factory import build_sms_provider
+from app.modules.sms.gateway import announce_mode, build_gateway
 from app.schemas.common import ErrorResponse
 
 logger = logging.getLogger(__name__)
@@ -26,6 +28,11 @@ def create_app(settings: Settings | None = None, providers: Providers | None = N
     owns_providers = providers is None
     app_providers = providers or build_providers(settings)
     configure_logging(settings.log_level)
+    # A live provider that cannot be built raises here, at startup. It is never replaced by
+    # the simulation.
+    owns_sms = app_providers.sms is None
+    if app_providers.sms is None:
+        app_providers.sms = build_sms_provider(settings, clock=app_providers.clock)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -42,13 +49,29 @@ def create_app(settings: Settings | None = None, providers: Providers | None = N
                 "database_configured": app.state.database is not None,
             },
         )
+        gateway = None
+        if app.state.database is not None and app_providers.sms is not None:
+            gateway = build_gateway(
+                settings=settings,
+                database=app.state.database,
+                provider=app_providers.sms,
+                hub=app_providers.realtime,
+                clock=app_providers.clock,
+                rng=app_providers.rng,
+            )
+            app.state.sms_gateway = gateway
+            await announce_mode(app.state.database, app_providers.sms)
+            if settings.sms_worker_enabled:
+                gateway.worker.start()
         try:
             yield
         finally:
+            if gateway is not None:
+                await gateway.worker.stop()
             app_providers.realtime.close_all()
             if app.state.database is not None:
                 await app.state.database.dispose()
-            if owns_providers:
+            if owns_providers or owns_sms:
                 await app_providers.aclose()
             logger.info("application stopped")
 
@@ -68,6 +91,7 @@ def create_app(settings: Settings | None = None, providers: Providers | None = N
     # Dependencies read settings from here so tests can override a single object.
     app.dependency_overrides[get_settings] = lambda: settings
     app.state.database = None
+    app.state.sms_gateway = None
     app.state.providers = app_providers
     app.state.settings = settings
 

@@ -186,6 +186,19 @@ These decisions are blocking or will block phase starts. Each has a `Due By` dat
 - Email lookup uses the service-role-only function `private.find_user_id_by_email`, because `auth.users` is not readable by clients.
 - Rejected requests are invisible to the sender, who can ask again after 7 days. Blocks are invisible to the blocked person.
 - Removing a Chikka contact deletes both directions of the relationship, since the relationship is mutual.
+### DEC-SMS-001 — SMS Gateway Implementation (Phase 2)
+**Date:** November 2026  
+**Status:** ✅ Decided  
+**Decision:** The SMS gateway follows `docs/architecture/sms-gateway-design.md`, implemented on the existing `messages` / `message_deliveries` / `provider_webhooks` schema, with these choices:
+- **Provider interface:** `send_message`, `get_message_status`, `validate_webhook`, `parse_inbound_message`, `get_country_capabilities`, plus `parse_status_callback` (a delivery callback is not an inbound SMS). Twilio is called through `httpx` (no vendor SDK; no new dependency).
+- **OD-011 (reply routing):** adopted the FRS route model. A (sender number, recipient number) pair belongs to one user for 30 days after their last message; no free sender number blocks the send with `sender_capacity`. Unmatched valid replies are kept server-side, hidden from users, listed for administrators, never auto-answered.
+- **OD-009 (simulation and credits):** simulation never charges and shows a labelled demo "would cost" rate. Credits are not deducted in either mode in this phase; the ledger belongs to Phase 4.
+- **Unverified routes:** unavailable in live mode, allowed in simulation with a visible warning. This deliberately refines FR-SMS-007 AC4 ("simulation uses the same rules").
+- **Mode** is startup configuration, never a runtime toggle. If the database's active provider disagrees with the running provider, sends fail with `503 sms_mode_mismatch`.
+- **Worker:** an in-process asyncio loop with row leases (`FOR UPDATE SKIP LOCKED`), not a broker. Dispatch is never inside a request handler. A claim that began and recorded no outcome is treated as an unknown outcome and is not resent.
+- **Schema additions** (`20261112000001_sms_gateway.sql`): per-country price, supported number types, consent requirement and non-secret provider settings; a redacted `provider_response` per attempt.
+- **Opt-out:** a keyword opt-out applies to every sender for that number; only the recipient's START or UNSTOP lifts it. "YES" is not an opt-in keyword.
+**Open items:** see `docs/deployment/sms-live-activation.md` (facts to verify with Twilio, Philippine sender registration OD-007, Filipino keywords).
 ### DEC-LEGAL-001 — Independent Project Disclaimer Required
 **Date:** November 2026  
 **Status:** ✅ Decided — Permanent  
