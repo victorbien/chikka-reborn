@@ -5,6 +5,7 @@ import { MessageComposer } from "@/components/shared/MessageComposer";
 import { formatSize } from "@/features/chat/format";
 import { useTypingSignal, useUploadAttachment } from "@/features/chat/hooks/useChat";
 import type { Attachment } from "@/features/chat/types";
+import { AiAssistantToggle } from "@/features/ai/components/AiAssistantToggle";
 import { toUserFacingError } from "@/lib/error-handling";
 
 export const MAX_CHARS = 2000;
@@ -22,6 +23,7 @@ export interface ChatComposerProps {
 /** Text, emoji and attachments. Files upload when picked, so Send only links them. */
 export function ChatComposer({ conversationId, onSend, disabledReason }: ChatComposerProps) {
   const [draft, setDraft] = useState("");
+  const [aiAssisted, setAiAssisted] = useState(false);
   const [files, setFiles] = useState<Attachment[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
   const [uploading, setUploading] = useState(0);
@@ -56,57 +58,78 @@ export function ChatComposer({ conversationId, onSend, disabledReason }: ChatCom
     }
   }
 
+  function changeDraft(value: string) {
+    setDraft(value);
+    // An emptied box starts over: the badge describes the text being sent, not the history.
+    if (!value.trim()) setAiAssisted(false);
+  }
+
   function send() {
     onSend(draft, files);
     setDraft("");
+    setAiAssisted(false);
     setFiles([]);
     setProblem(null);
   }
 
   return (
-    <MessageComposer
-      value={draft}
-      onChange={setDraft}
-      onSend={send}
-      channel="internet"
-      maxLength={MAX_CHARS}
-      emoji
-      onTyping={typing}
-      onAttach={(picked) => void attach(picked)}
-      accept={ACCEPT}
-      hasAttachments={files.length > 0}
-      sendDisabled={uploading > 0}
-      disabledReason={disabledReason}
-      autoFocus
-      attachments={
-        files.length || uploading ? (
-          <ul aria-label="Files to send" className="flex flex-wrap gap-2">
-            {files.map((file) => (
-              <li
-                key={file.id}
-                className="flex min-h-11 items-center gap-2 rounded-control border border-border px-2 text-xs"
-              >
-                <span className="max-w-40 truncate">{file.file_name}</span>
-                <span className="text-fg-muted">{formatSize(file.size_bytes)}</span>
-                <button
-                  type="button"
-                  aria-label={`Remove ${file.file_name}`}
-                  onClick={() => setFiles((current) => current.filter((f) => f.id !== file.id))}
-                  className="inline-flex size-8 items-center justify-center rounded-control hover:bg-surface-raised"
+    <>
+      <div className="border-t border-border bg-surface px-3 pt-2">
+        <AiAssistantToggle
+          draft={draft}
+          conversationId={conversationId}
+          channel="chat"
+          onUse={(text) => {
+            setDraft(text);
+            setAiAssisted(true);
+          }}
+        />
+      </div>
+      <MessageComposer
+        value={draft}
+        onChange={changeDraft}
+        onSend={send}
+        aiAssisted={aiAssisted}
+        channel="internet"
+        maxLength={MAX_CHARS}
+        emoji
+        onTyping={typing}
+        onAttach={(picked) => void attach(picked)}
+        accept={ACCEPT}
+        hasAttachments={files.length > 0}
+        sendDisabled={uploading > 0}
+        disabledReason={disabledReason}
+        autoFocus
+        attachments={
+          files.length || uploading ? (
+            <ul aria-label="Files to send" className="flex flex-wrap gap-2">
+              {files.map((file) => (
+                <li
+                  key={file.id}
+                  className="flex min-h-11 items-center gap-2 rounded-control border border-border px-2 text-xs"
                 >
-                  <X aria-hidden className="size-3.5" />
-                </button>
-              </li>
-            ))}
-            {uploading ? (
-              <li role="status" className="flex min-h-11 items-center px-2 text-xs text-fg-muted">
-                Uploading {uploading === 1 ? "1 file" : `${uploading} files`}…
-              </li>
-            ) : null}
-          </ul>
-        ) : null
-      }
-      error={problem ? <FormAlert tone="error">{problem}</FormAlert> : null}
-    />
+                  <span className="max-w-40 truncate">{file.file_name}</span>
+                  <span className="text-fg-muted">{formatSize(file.size_bytes)}</span>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${file.file_name}`}
+                    onClick={() => setFiles((current) => current.filter((f) => f.id !== file.id))}
+                    className="inline-flex size-8 items-center justify-center rounded-control hover:bg-surface-raised"
+                  >
+                    <X aria-hidden className="size-3.5" />
+                  </button>
+                </li>
+              ))}
+              {uploading ? (
+                <li role="status" className="flex min-h-11 items-center px-2 text-xs text-fg-muted">
+                  Uploading {uploading === 1 ? "1 file" : `${uploading} files`}…
+                </li>
+              ) : null}
+            </ul>
+          ) : null
+        }
+        error={problem ? <FormAlert tone="error">{problem}</FormAlert> : null}
+      />
+    </>
   );
 }

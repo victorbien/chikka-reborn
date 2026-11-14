@@ -1,6 +1,7 @@
 ﻿import { MessageSquareText } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { LowCreditWarning } from "@/features/credits/components/LowCreditWarning";
 import { NewSmsForm } from "@/features/sms/components/NewSmsForm";
 import { SmsConversationList } from "@/features/sms/components/SmsConversationList";
 import { SmsConversationView } from "@/features/sms/components/SmsConversationView";
@@ -15,6 +16,7 @@ export function SmsPage({ mode }: { mode: "list" | "new" | "conversation" }) {
     <div>
       <h1 className="sr-only">SMS</h1>
       <SmsModeBanner />
+      <LowCreditWarning />
       <div className="grid gap-4 md:grid-cols-[18rem_1fr]">
         <div className={cn(showDetail ? "hidden md:block" : "block")}>
           <SmsConversationList selectedId={conversationId} />

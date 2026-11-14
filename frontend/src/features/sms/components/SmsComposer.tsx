@@ -1,7 +1,9 @@
 ﻿import { useState } from "react";
 import { FormAlert } from "@/components/common/FormAlert";
+import { AiAssistedBadge } from "@/components/shared/ChannelBadge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
+import { AiAssistantToggle } from "@/features/ai/components/AiAssistantToggle";
 import { SendConfirmDialog } from "@/features/sms/components/SendConfirmDialog";
 import { SmsQuotePanel } from "@/features/sms/components/SmsQuotePanel";
 import { useQuote, useSendSms, useSetConsent } from "@/features/sms/hooks/useSms";
@@ -20,6 +22,7 @@ const MAX_CHARS = 1600;
  *  so, and only after the confirmation dialog. AI text would enter only by being typed here. */
 export function SmsComposer({ target, onSent }: SmsComposerProps) {
   const [body, setBody] = useState("");
+  const [aiAssisted, setAiAssisted] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const quote = useQuote(target, body);
   const consent = useSetConsent(target);
@@ -34,6 +37,11 @@ export function SmsComposer({ target, onSent }: SmsComposerProps) {
     current !== undefined &&
     current.can_send;
   const failedCheck = quote.isError && target !== null;
+
+  function changeBody(value: string) {
+    setBody(value);
+    if (!value.trim()) setAiAssisted(false);
+  }
   const sendError = send.isError ? toUserFacingError(send.error).message : undefined;
 
   return (
@@ -45,17 +53,29 @@ export function SmsComposer({ target, onSent }: SmsComposerProps) {
       }}
     >
       <div>
-        <label htmlFor="sms-body" className="mb-1 block text-sm font-medium">
-          Message
-        </label>
+        <div className="mb-1 flex flex-wrap items-center gap-2">
+          <label htmlFor="sms-body" className="text-sm font-medium">
+            Message
+          </label>
+          {aiAssisted ? <AiAssistedBadge /> : null}
+        </div>
         <Textarea
           id="sms-body"
           value={body}
           maxLength={MAX_CHARS}
-          onChange={(event) => setBody(event.target.value)}
+          onChange={(event) => changeBody(event.target.value)}
           aria-describedby="sms-quote"
         />
       </div>
+      <AiAssistantToggle
+        draft={body}
+        channel="sms"
+        onUse={(text) => {
+          // Only fills the box. The server check and the confirmation dialog still gate Send.
+          setBody(text.slice(0, MAX_CHARS));
+          setAiAssisted(true);
+        }}
+      />
       <div id="sms-quote">
         <SmsQuotePanel
           body={body}
@@ -86,6 +106,7 @@ export function SmsComposer({ target, onSent }: SmsComposerProps) {
               onSuccess: (message) => {
                 setConfirmOpen(false);
                 setBody("");
+                setAiAssisted(false);
                 onSent(message);
               },
             })

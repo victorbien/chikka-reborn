@@ -69,6 +69,15 @@ function quote(overrides: Partial<Quote> = {}): Quote {
       too_long: false,
     },
     cost: { units: 100, credits: 1, source: "demo_default", estimated: true },
+    balance: {
+      ledger: "demo",
+      is_simulated: true,
+      available_units: 5000,
+      available_credits: 50,
+      sufficient: true,
+      charges_apply: true,
+      is_low: false,
+    },
     consent: { required: true, granted: true, notice_version: "2026-11-01" },
     recipient_opted_out: false,
     blockers: [],
@@ -304,9 +313,7 @@ describe("composing an SMS", () => {
     await user.type(screen.getByLabelText("Message"), "Hello");
 
     expect(
-      await screen.findByText(
-        /Estimated 1.00 credits \(nothing is charged in simulation, demo rate\)/,
-      ),
+      await screen.findByText(/Estimated 1.00 demo credits \(demo rate\)/),
     ).toBeInTheDocument();
     expect(screen.getByText(/not verified for live SMS/)).toBeInTheDocument();
     expect(screen.getByText(/not guaranteed/)).toBeInTheDocument();

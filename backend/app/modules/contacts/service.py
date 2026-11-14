@@ -18,6 +18,8 @@ from datetime import UTC, datetime, timedelta
 from typing import cast
 from uuid import UUID
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.exceptions import (
     ConflictError,
     NotFoundError,
@@ -30,7 +32,7 @@ from app.database.session import Database
 from app.integrations.storage_provider import StorageError, StorageProvider
 from app.modules.audit.service import AuditLogger
 from app.modules.auth.phone_service import normalise_phone
-from app.modules.contacts.models import Contact, ContactGroup
+from app.modules.contacts.models import Contact, ContactGroup, ContactRequest
 from app.modules.contacts.repository import (
     ContactRepository,
     GroupLimitReachedError,
@@ -55,6 +57,7 @@ from app.modules.contacts.schemas import (
     SearchPerson,
     SearchResponse,
 )
+from app.modules.notifications.service import create_notification
 from app.modules.profiles.models import Profile
 from app.modules.profiles.presence import PresenceRegistry
 from app.modules.profiles.schemas import PresencePreference
@@ -398,6 +401,30 @@ class ContactService:
 
     # -- requests ----------------------------------------------------------------------------
 
+    async def _notify_accepted(
+        self,
+        session: AsyncSession,
+        repository: ContactRepository,
+        accepter_id: UUID,
+        pending: ContactRequest,
+    ) -> None:
+        """Tell the person who asked that the request was accepted (once per request)."""
+        accepter = await repository.active_profile(accepter_id)
+        requester = (
+            pending.from_user_id if pending.to_user_id == accepter_id else pending.to_user_id
+        )
+        name = accepter.display_name if accepter else "Someone"
+        await create_notification(
+            session,
+            user_id=requester,
+            notification_type="contact_accepted",
+            title=f"{name} accepted your contact request",
+            reference_type="contact_request",
+            reference_id=pending.id,
+            dedupe_key=f"contact_accepted:{pending.id}",
+            now=self._clock(),
+        )
+
     async def send_request(
         self, user: AuthenticatedUser, request: ContactRequestCreate
     ) -> ContactRequestSent:
@@ -444,6 +471,7 @@ class ContactService:
                     target_id=str(target.id),
                     metadata={"via": "reverse_request"},
                 )
+                await self._notify_accepted(session, repository, user.id, pending)
                 return ContactRequestSent(status="contacts")
 
             rejected_at = await repository.last_rejection_at(user.id, target.id)
@@ -459,6 +487,18 @@ class ContactService:
                     actor_id=user.id,
                     target_type="user",
                     target_id=str(target.id),
+                )
+                sender = await repository.active_profile(user.id)
+                sender_name = sender.display_name if sender else "Someone"
+                await create_notification(
+                    session,
+                    user_id=target.id,
+                    notification_type="contact_request",
+                    title=f"{sender_name} sent you a contact request",
+                    reference_type="contact_request",
+                    reference_id=created.id,
+                    dedupe_key=f"contact_request:{created.id}",
+                    now=now,
                 )
         return neutral
 
@@ -515,6 +555,7 @@ class ContactService:
                     target_type="user",
                     target_id=str(pending.from_user_id),
                 )
+                await self._notify_accepted(session, repository, user.id, pending)
             contact = await repository.contact_for_user(user.id, pending.from_user_id)
             if contact is None:
                 raise ConflictError(_REQUEST_UNAVAILABLE, code="request_unavailable")

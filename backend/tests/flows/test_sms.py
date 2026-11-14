@@ -1071,21 +1071,30 @@ def test_audit_trail_has_no_numbers_or_message_text(harness: Harness) -> None:
         assert body not in row["m"]
 
 
-def test_simulation_charges_nothing(harness: Harness) -> None:
-    headers, _ = ready_to_send(harness)
+def test_simulation_spends_demo_credits_and_never_touches_live_credits(harness: Harness) -> None:
+    """Simulated sends use the separate demo ledger. Real credit is never charged for them."""
+    headers, user_id = ready_to_send(harness)
     sent = send(harness, headers).json()["data"]
-    harness.run_worker()
+    pump(harness)
+    message_id = uuid.UUID(sent["id"])
     row = harness.sql(
-        "select credit_cost_units, is_simulated from public.messages where id = $1",
-        uuid.UUID(sent["id"]),
+        "select credit_cost_units, is_simulated from public.messages where id = $1", message_id
     )[0]
-    assert row["credit_cost_units"] is None and row["is_simulated"] is True
-    assert (
-        harness.sql(
-            "select 1 from public.credit_transactions where message_id = $1", uuid.UUID(sent["id"])
-        )
-        == []
+    assert row["is_simulated"] is True and row["credit_cost_units"] > 0
+    entries = harness.sql(
+        "select ledger_type, entry_type from public.credit_transactions where message_id = $1",
+        message_id,
     )
+    assert {(e["ledger_type"], e["entry_type"]) for e in entries} == {
+        ("demo", "reservation"),
+        ("demo", "deduction"),
+    }
+    live = harness.sql(
+        "select balance_units, reserved_units from public.messaging_credits "
+        "where user_id = $1 and ledger_type = 'live'",
+        uuid.UUID(user_id),
+    )[0]
+    assert (live["balance_units"], live["reserved_units"]) == (0, 0)
 
 
 # -- administration -----------------------------------------------------------------------------

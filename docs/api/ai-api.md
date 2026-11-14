@@ -2,300 +2,142 @@
 
 **Document:** CHKR-API-006  
 **Project:** Chikka Reborn  
-**Version:** 1.0  
-**Status:** Draft  
+**Version:** 2.0  
+**Status:** Implemented (Module F)  
 **Last Revised:** November 2026  
 
 ---
 
 ## Purpose
 
-Documents all AI assistant endpoints. All endpoints return suggestions only — none trigger message sending.
+Documents the AI assistant endpoints. All of them return drafts for the user to review. None sends a message. Design: ADL-021 in [architecture-decisions.md](../architecture/architecture-decisions.md).
 
 ## Base Path
 
-`/api/v1/ai`
-
----
+`/api/v1/ai`. Every endpoint needs a signed-in user with a verified email. Responses use the standard envelope (`data`, `request_id`; errors as `error.code`, `error.message`, `error.details`).
 
 ## AI Safety Invariant
 
-> **No AI endpoint sends a message. All AI endpoints return suggestions for user review.**
-> 
-> The frontend places AI output in the compose field only when the user explicitly accepts a suggestion. The user then sends the message via a separate explicit action. This is a permanent, non-configurable constraint.
+> **No AI endpoint sends a message.** The frontend puts a draft in the message box only when the user accepts it, and the user sends it with a separate, explicit action. Accepting a draft shows an "AI-assisted" badge on the message being written.
+
+## Access rules
+
+Each AI request passes these checks in order:
+
+| Check | Failure |
+|---|---|
+| Administrator switch (`system_settings.ai_enabled`) | `503 ai_disabled_by_admin` |
+| The user turned the assistant on (`PUT /ai/settings`, default off) | `403 ai_not_enabled` |
+| Hourly limit (`system_settings.ai_user_limit_per_hour`, default 30) | `429 rate_limited` with `Retry-After` |
+| Conversation features: caller is a member (else `404 not_found`) and has not turned AI off for that conversation | `403 ai_disabled_for_conversation` |
+
+Optimising an SMS that already fits in the target segment count is answered locally: no model call, no limit hit, nothing logged.
+
+## Common response fields
+
+Every draft response includes:
+
+| Field | Meaning |
+|---|---|
+| `assistance_id` | Id to report the user's decision against. `null` if the log write failed or no model call was made |
+| `model_id` | Model that answered (`mock-ai-1` for the demo provider) |
+| `latency_ms` | Time spent on the model call |
+| `simulated` | `true` when the demo provider answered. The UI says so |
+| `message` | Set when there is no usable draft: `"Couldn't generate a suggestion..."` (empty or invalid model output, `200`) or a refusal by the model |
+
+## Errors
+
+| Status | Code | When | User impact |
+|---|---|---|---|
+| 422 | `validation_error` | Unknown field, empty or oversize text, unsupported language, bad count | Field message |
+| 422 | `no_context` | The conversation has no messages the assistant may read | Message in panel |
+| 502 | `ai_unavailable` | Timeout, outage, throttling or a credential problem at the provider. `details.reason` is `timeout`, `throttled`, `unavailable` or `configuration`. Timeouts and outages are retried once first | Panel shows an error; the message box keeps working |
+| 429 | `rate_limited` | Hourly limit | Panel shows that AI is paused |
+
+Provider error text, prompts and message content never appear in errors.
 
 ---
+
+## GET /ai/status
+
+Whether the assistant is available and on for the caller.
+
+```json
+{ "data": { "available": true, "enabled": false, "simulated": true,
+  "model_id": "mock-ai-1", "max_text_chars": 1600,
+  "languages": [ { "code": "en", "name": "English" }, { "code": "fil", "name": "Filipino (Tagalog)" } ] } }
+```
+
+Languages: `en`, `fil`, `es`, `ceb`, `ilo`, `hil`, `ja`, `zh`, `ko`, `fr`. Quality for regional languages depends on the model (OD-002).
+
+## PUT /ai/settings
+
+`{ "enabled": true }` turns the assistant on or off for the caller. Recorded in the audit log as a `consent` event (`ai.enabled`, `ai.disabled`). Returns the new status.
 
 ## POST /ai/suggest-replies
 
-Generate smart reply suggestions based on conversation context.  
-**Auth:** Required  
-**Phase:** 3  
-**FR:** FR-AI-001
+`{ "conversation_id": "uuid", "context_message_count": 10, "count": 3 }` (`context_message_count` 1-20, `count` 1-5). Chikka conversations only.
 
-**Request:**
-```json
-{
-  "conversation_id": "uuid",
-  "context_message_count": 10,
-  "count": 3
-}
-```
-
-Fields:
-- `conversation_id` — the conversation to generate replies for
-- `context_message_count` — number of recent messages to include as context (default 10, max 20)
-- `count` — number of suggestions to generate (default 3, max 5)
-
-**Response 200:**
-```json
-{
-  "data": {
-    "suggestions": [
-      "Salamat! Ikaw din!",
-      "Maayos naman, salamat. Ikaw?",
-      "Okay lang! Kumusta ka rin?"
-    ],
-    "model_id": "anthropic.claude-3-haiku-...",
-    "latency_ms": 1240
-  },
-  "request_id": "..."
-}
-```
-
-**Errors:**
-- `404 NOT_FOUND` — conversation does not exist or user is not a participant
-- `422 VALIDATION_ERROR` — invalid count or context parameters
-- `502 PROVIDER_ERROR` — Bedrock unavailable (non-blocking; user can still type manually)
-- `429 RATE_LIMITED` — AI request limit exceeded
-
----
+Returns `suggestions` (distinct, at most `count`).
 
 ## POST /ai/translate
 
-Translate a message into a specified language.  
-**Auth:** Required  
-**Phase:** 3  
-**FR:** FR-AI-002
+`{ "text": "...", "target_language": "fil", "source_language": "en" }`. `source_language` is optional (auto-detect) and must differ from the target. Text is 1-1600 characters.
 
-**Request:**
-```json
-{
-  "text": "I hope you are feeling better soon.",
-  "target_language": "fil",
-  "source_language": "en"
-}
-```
-
-Fields:
-- `text` (required) — text to translate (max 1600 chars)
-- `target_language` (required) — BCP 47 language tag (e.g. `fil`, `ceb`, `ilo`, `en`, `ja`)
-- `source_language` (optional) — BCP 47 tag; omit for auto-detect
-
-**Response 200:**
-```json
-{
-  "data": {
-    "original_text": "I hope you are feeling better soon.",
-    "translated_text": "Umaasa akong mabilis kang mabuting muli.",
-    "source_language": "en",
-    "target_language": "fil",
-    "model_id": "anthropic.claude-3-haiku-...",
-    "latency_ms": 980
-  },
-  "request_id": "..."
-}
-```
-
-**Supported language codes (non-exhaustive):**
-`en` (English), `fil` (Filipino/Tagalog), `ceb` (Cebuano), `ilo` (Ilocano), `hil` (Hiligaynon), `ja` (Japanese), `zh` (Chinese), `ko` (Korean), `es` (Spanish), `fr` (French)
-
-> **Note:** Actual language support depends on the selected Bedrock model (OD-002). Verify supported languages when model is finalised.
-
-**Errors:** `422` — unsupported language code; `502 PROVIDER_ERROR`
-
----
+Returns `original_text`, `translated_text`, `source_language`, `target_language`.
 
 ## POST /ai/rewrite
 
-Rewrite a draft message per a specified instruction.  
-**Auth:** Required  
-**Phase:** 3  
-**FR:** FR-AI-003
+`{ "text": "...", "instruction": "make_professional", "tone": null }`.
 
-**Request:**
-```json
-{
-  "text": "hey can we meet tmrw",
-  "instruction": "make_formal"
-}
-```
-
-Valid `instruction` values:
-- `improve_clarity` — improve readability and clarity
-- `fix_grammar` — correct grammar and spelling only
-- `make_formal` — shift to formal/professional tone
-- `make_casual` — shift to casual/conversational tone
-- `shorten` — reduce length while preserving meaning (distinct from SMS optimisation)
-
-**Response 200:**
-```json
-{
-  "data": {
-    "original_text": "hey can we meet tmrw",
-    "rewritten_text": "Hi, would you be available to meet tomorrow?",
-    "instruction": "make_formal",
-    "model_id": "...",
-    "latency_ms": 870
-  },
-  "request_id": "..."
-}
-```
-
----
+`instruction` is one of `make_professional`, `make_friendly`, `make_formal`, `make_casual`, `shorten`, `improve_clarity`, `fix_grammar`, `adjust_tone`. `adjust_tone` requires `tone` (`formal`, `casual`, `friendly`, `professional`). Returns `original_text`, `rewritten_text`, `instruction`.
 
 ## POST /ai/optimise-sms
 
-Shorten a message to fit within SMS segment limits while preserving meaning.  
-**Auth:** Required  
-**Phase:** 3  
-**FR:** FR-AI-004
+`{ "text": "...", "max_segments": 1 }` (`max_segments` 1-10). The encoding is detected server-side.
 
-**Request:**
 ```json
-{
-  "text": "I just wanted to let you know that the team meeting has been rescheduled from Wednesday to next Thursday at 3pm in the main conference room.",
-  "max_segments": 1,
-  "encoding": "gsm7"
-}
+{ "data": {
+  "original_text": "...", "optimised_text": "...",
+  "original":  { "characters": 181, "units": 181, "segments": 2, "encoding": "gsm7" },
+  "optimised": { "characters": 52,  "units": 52,  "segments": 1, "encoding": "gsm7" },
+  "max_segments": 1, "within_target": true, "meaning_preserved": true,
+  "assistance_id": "uuid", "model_id": "...", "latency_ms": 900, "simulated": false, "message": null } }
 ```
 
-Fields:
-- `text` (required) — original message (max 1600 chars)
-- `max_segments` (required) — target maximum segment count (1–10)
-- `encoding` — `gsm7` (160 chars/segment) or `unicode` (70 chars/segment)
-
-**Response 200:**
-```json
-{
-  "data": {
-    "original_text": "I just wanted to let you know that...",
-    "optimised_text": "Team meeting moved: next Thu 3pm, main conf room.",
-    "original_length": 137,
-    "optimised_length": 49,
-    "original_segments": 1,
-    "optimised_segments": 1,
-    "encoding": "gsm7",
-    "meaning_preserved": true,
-    "model_id": "...",
-    "latency_ms": 1100
-  },
-  "request_id": "..."
-}
-```
-
-If meaning cannot be preserved within the segment limit:
-```json
-{
-  "data": {
-    "meaning_preserved": false,
-    "message": "The message cannot be shortened to 1 segment without losing important information. Consider splitting into 2 messages.",
-    "optimised_text": null
-  }
-}
-```
-
-The AI never silently truncates a message. If meaning preservation is not possible, it says so explicitly.
-
----
+- Segment counts come from the server's GSM-7 / Unicode analysis (160/153 and 70/67 per segment). They are estimates; the carrier decides the final split.
+- `optimised_text` is `null` with an explanatory `message` when the model says the meaning cannot be kept, when the output is invalid, or when the rewrite saves no segment. Nothing is silently truncated.
+- `within_target` is `false` when the shorter version still exceeds `max_segments`.
+- `meaning_preserved` is the model's own claim and is not verified. The user must read the draft.
+- No cost or saving is stated. Prices depend on the provider and verified routes.
+- Typographic quotes, dashes and ellipses in the output are replaced with GSM-7 characters.
 
 ## POST /ai/summarise
 
-Summarise a conversation thread.  
-**Auth:** Required (must be a conversation participant)  
-**Phase:** 3  
-**FR:** FR-AI-005
-
-**Request:**
-```json
-{
-  "conversation_id": "uuid",
-  "message_count": 20
-}
-```
-
-- `message_count` — number of most recent messages to summarise (default 20, max 50)
-
-**Response 200:**
-```json
-{
-  "data": {
-    "summary": "Maria and Jose discussed plans for the weekend. They agreed to meet on Saturday at 3pm near the SM mall. Jose mentioned he would bring food.",
-    "messages_summarised": 18,
-    "model_id": "...",
-    "latency_ms": 1850
-  },
-  "request_id": "..."
-}
-```
-
----
+`{ "conversation_id": "uuid", "message_count": 20, "length": "medium" }` (`message_count` 2-50, `length` `short`, `medium` or `long`). Chikka conversations only. Returns `summary` and `messages_summarised`.
 
 ## POST /ai/compose
 
-Compose a full message from a brief user prompt.  
-**Auth:** Required  
-**Phase:** 3
+`{ "prompt": "Tell my friend I will be 15 minutes late", "context": [], "max_length": 160, "language": "fil" }`. `prompt` is 1-300 characters, `context` up to 5 short strings used for tone only, `max_length` 20-1600, `language` optional. Output longer than `max_length` is rejected, not truncated.
 
-**Request:**
-```json
-{
-  "prompt": "Tell my mom I arrived safely and will call her tonight",
-  "context": ["Previous messages for tone reference"],
-  "max_length": 160,
-  "language": "fil"
-}
-```
+Returns `composed_text`, `character_count` and `segments` (the SMS size estimate).
 
-Fields:
-- `prompt` (required) — user's intent description (max 300 chars)
-- `context` (optional) — recent messages to inform tone/language
-- `max_length` (optional) — target character limit (useful for SMS)
-- `language` (optional) — target language BCP 47 code
+## POST /ai/assistance/{assistance_id}/decision
 
-**Response 200:**
-```json
-{
-  "data": {
-    "composed_text": "Nanay, nakarating na ako nang ligtas. Tatawag ako mamaya ng gabi.",
-    "character_count": 64,
-    "language_detected": "fil",
-    "model_id": "...",
-    "latency_ms": 1320
-  },
-  "request_id": "..."
-}
-```
+`{ "decision": "accepted" | "edited" | "dismissed" }`. Records what the user did with a draft. Only the owner can update the row; anyone else gets `404`. The frontend calls it fire-and-forget.
 
 ---
 
-## AI Rate Limits and Error Behaviour
+## Privacy
 
-All AI endpoints share these behaviours:
-
-| Scenario | Response | User Impact |
-|---|---|---|
-| Provider timeout | `502 PROVIDER_ERROR` | Error shown in panel; compose field remains active |
-| Rate limit exceeded | `429 RATE_LIMITED` with retry-after header | "AI features temporarily paused" message; compose field active |
-| Empty/unusable response | `200` with `null` result + `message` | "Couldn't generate suggestion. Try again." |
-| Invalid input | `422 VALIDATION_ERROR` | Field-level error message |
-
-AI failures **never** block manual message composition or sending.
-
----
+- Conversation features send at most the newest 20 (replies) or 50 (summary) text messages, each cut to 500 characters, within a 6000-character budget. Lines are labelled `me` or `them`; names and ids are not sent.
+- Emails and numbers of eight or more digits in conversation context are replaced with `[email]` and `[number]`. The user's own draft and compose prompt are sent as written.
+- `ai_assistance_logs` keeps feature, model, prompt version, language, outcome, token counts, latency, error code, the user's decision and a SHA-256 of the output. It never stores prompts, drafts or conversation text. Application logs hold the same metadata.
+- Cleared and hidden messages, messages deleted for everyone, and conversations where the member turned AI off are never read.
 
 ## Revision History
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | November 2026 | Kiro (Principal Architect) | Initial draft |
+| 2.0 | November 2026 | Kiro | Implemented. Opt-in and status endpoints, decision endpoint, `adjust_tone` and `make_professional`, summary length, segment objects (`gsm7` / `ucs2`), `502 ai_unavailable`, empty output as `200` with a message |

@@ -700,6 +700,69 @@ The repository held two conflicting real-time records: ADL-002 (Supabase Realtim
 - New table `message_attachments` and private bucket `message-attachments` (migration `20261111000003`). Images are re-encoded to drop EXIF, except GIFs, which are only validated so animation survives.
 - Wire protocol: `docs/api/realtime-api.md`. REST contract: `docs/api/messaging-api.md`.
 
+## ADL-021 - AI Assistant Implementation
+
+**Date:** November 2026  
+**Status:** Accepted  
+
+### Context
+Module F adds smart replies, translation, rewriting, tone changes, summaries, SMS optimisation and composition. The design rules in `ai-guidelines.md` require a provider abstraction, drafts only, minimal context and no content in logs.
+
+### Decision
+- **`AiProvider`** (`integrations/ai/base.py`) is one primitive, `complete(request)`. Prompts, parsing and validation live in `modules/ai`, so changing the model or vendor is configuration. Providers: `MockAiProvider` (default, canned drafts, scriptable in tests) and `BedrockAiProvider`.
+- **Bedrock is called over HTTPS with `httpx`** (Converse API, Bedrock API key as a bearer token). No `boto3` and no new dependency, as the SMS gateway does for Twilio. Consequence: IAM access keys and roles (SigV4) are not supported yet. If the deployment needs them, add `boto3` with an ADR and pinned version, inside `integrations/ai/` only.
+- **Selection** is startup configuration (`AI_PROVIDER_MODE`). Bedrock without full configuration fails at startup and never becomes the mock.
+- **Opt-in.** `profiles.ai_enabled` defaults to off. The user turns it on in the assistant panel (audited as a `consent` event). Gates, in order: admin kill switch (`system_settings.ai_enabled`), the user's opt-in, the hourly limit (`system_settings.ai_user_limit_per_hour`), then for conversation features the member's per-conversation switch.
+- **Drafts only.** No AI endpoint sends. The only follow-up call records the user's decision (`accepted`, `edited`, `dismissed`) against the log row. The composer shows an "AI-assisted" badge on text that came from the assistant.
+- **Privacy.** Conversation features read at most 20 (replies) or 50 (summary) recent text messages through `ChatService.ai_context`, which has no read-receipt side effects and respects cleared history and hidden messages. Lines are labelled me/them (no names or ids), emails and numbers of eight or more digits are masked, and a character budget applies. The user's own draft is sent unmasked, because masking would change the translation. Logs and `ai_assistance_logs` hold metadata and an output hash, never text.
+- **Output is untrusted.** Model JSON is parsed and bounded. Empty or invalid output returns `200` with no draft and a message. Provider failures return `502 ai_unavailable` after one retry for timeouts and unavailability (not for throttling).
+- **SMS optimisation** recomputes segments server-side with `modules/sms/segments.analyse` (GSM-7 or Unicode, concatenated limits), never calls the model when the message already fits, drops a result that saves no segment, and normalises typographic characters to GSM-7. `meaning_preserved` is the model's own claim and is shown as such. No price or saving is claimed.
+
+### Alternatives considered
+- `boto3`: supports IAM, but adds a synchronous SDK and a dependency.
+- Per-feature provider methods (`translate`, `summarise`, ...): more surface to implement per vendor for no gain.
+
+### Consequences
+- The AI feature in the frontend is imported directly by the chat and SMS composers (`features/ai`), a deliberate exception to the no-cross-feature rule because the assistant is an optional add-on to both.
+- Sent messages do not yet record `messages.is_ai_assisted` or `ai_assistance_log_id`. Linking them needs a field on the send request.
+- Replies and summaries work for Chikka conversations only. SMS threads have no AI context endpoint yet.
+- Model choice (OD-002), language quality for `ceb`, `ilo` and `hil`, and token pricing are still open.
+
+## ADL-022 - Notifications and Simulated Credits
+
+**Date:** November 2026  
+**Status:** Accepted  
+
+### Context
+Module G (notifications) and Module H (credits) were specified and had tables (migrations 09 and 10) but no code. The task asks for a simulated credit ledger for the hackathon, no real payments, no duplicate notifications, and email through a configurable provider.
+
+### Decision
+**Credits**
+- **Simulated credits only, on the existing `demo` ledger.** Simulated SMS reserve, spend and refund demo credits. The `live` ledger is untouched and live SMS is not metered, because there is no payment system to fund it. The database already rejects a live message on the demo ledger and the reverse.
+- **This supersedes** the Phase 2 rule "simulation never charges" (DEC-SMS-001, OD-009) and the matching line in `sms-guidelines.md` ("never deduct credits for simulation mode messages"). The intent of that rule, that simulation must never cost real money, is kept by the ledger separation. The guideline text should be read as "never real credit".
+- **One ledger module** (`modules/credits/ledger.py`) is the only code that changes a balance. It appends rows to `credit_transactions`; the trigger applies them. Reserve at queue time (inside the send transaction, so an overdraw refuses the send and rolls the message back), spend on provider acceptance, release if never accepted, refund if it fails after acceptance. Every step checks for its own entry first (unique `(message_id, entry_type)`), so repeats are no-ops. A capture that cannot be afforded (only possible after a release and a late correction) is logged and skipped rather than failing the status update.
+- **Administrator adjustments** are `adjustment` entries with actor, reason, audit row and a user notification. The `Idempotency-Key` becomes the entry's `external_reference`; the account row is locked first so concurrent repeats replay. Only the demo ledger can be adjusted.
+- **Low balance** fires once per crossing using `messaging_credits.low_balance_alerted`, against the user's own threshold.
+
+**Notifications**
+- **Dedupe and grouping in the database** (migration `20261113000001`): unique `(user_id, dedupe_key)`, and a unique open-group index so unread events of one chat fold into one row with `occurrence_count`.
+- **A delivery outbox** on the same table (`announced_at`, `email_*`, `browser_push`). An in-process dispatcher (like the SMS worker; single instance) announces rows over WebSocket and sends email after commit, so a rollback never notifies and a crash never loses a notification.
+- **Email** goes through `EmailProvider` (`mock`, `smtp` via the standard library; no new dependency). SMTP that cannot be built fails at startup and never becomes the mock. Emails never contain SMS text.
+- **Browser notifications** use the Notification API while the app is open and the tab is in the background. The server decides `browser` (preference, quiet hours); the browser asks for permission only on a button press. No service-worker push or push service.
+- Types gain `security`. Failed SMS, system and security notices cannot be switched off in the app.
+
+### Alternatives considered
+- Charging at queue time and refunding on failure: simpler, but shows spent credit for messages that never left. Reservation keeps balance and holds separate.
+- Updating balances in application code: rejected; the ledger and trigger make "balance equals sum of entries" a database guarantee.
+- Sending email inside the request transaction: couples user actions to SMTP latency and can email about a change that rolls back.
+- Redis or a queue for delivery: an extra datastore needs its own ADR (ADL-009 remains open).
+
+### Consequences
+- Live SMS is unmetered until payments exist. Adding live charging means funding the live ledger first.
+- Dispatch and announce are single-instance, same limit as ADL-020 and the SMS worker.
+- Notification email addresses are read from `auth.users` by the backend's database role.
+- Open items: a scheduled purge of expired notifications and old rate-limit rows; an admin UI for adjustments (the API exists); web push for closed browsers.
+
 ---
 ## Decisions Pending (Open Decisions from PRD)
 

@@ -8,8 +8,9 @@ Rules that keep this safe:
 * Only transient failures retry, with exponential backoff and jitter and a hard attempt limit.
   Asynchronous failures reported by callbacks are never resent automatically.
 * Status moves forward only. The first terminal state wins. "accepted" is never "delivered".
-* Credits: this phase does not charge, so there is nothing to refund. The ledger hooks belong
-  to Phase 4 (docs/architecture/sms-gateway-design.md section 5.2).
+* Credits (simulated demo credits only): the queued message holds its cost; the provider
+  accepting it spends the hold; a permanent failure releases the hold or refunds the spend.
+  Each step is idempotent per message, so retries and repeated callbacks never charge twice.
 """
 
 import logging
@@ -34,6 +35,7 @@ from app.integrations.sms.base import (
 )
 from app.integrations.sms.errors import OPT_OUT_CODES, reason_for_any
 from app.modules.audit.service import AuditLogger
+from app.modules.credits import ledger as credit_ledger
 from app.modules.notifications.service import create_notification
 from app.modules.sms.gateway_repository import GatewayRepository
 from app.modules.sms.repository import ProviderConfig, SmsRepository
@@ -490,6 +492,7 @@ class SmsEngine:
             applied=True,
             ignore_reason=None,
         )
+        await credit_ledger.settle_failed(session, ctx["message_id"], provider=self._provider.name)
         await self._notify_terminal(session, ctx, "failed")
         effects.updated.add(ctx["message_id"])
         await self._audit.record(
@@ -613,6 +616,12 @@ class SmsEngine:
             if correction and mapped not in ("delivered", "undelivered", "failed"):
                 values["terminal_at"] = None
         await repo.update_delivery(ctx["id"], values)
+        if mapped in ("accepted", "sent", "delivered"):
+            await credit_ledger.capture(session, ctx["message_id"], provider=self._provider.name)
+        elif mapped in ("failed", "undelivered"):
+            await credit_ledger.settle_failed(
+                session, ctx["message_id"], provider=self._provider.name
+            )
         if correction:
             await self._audit.record(
                 session,
@@ -661,6 +670,8 @@ class SmsEngine:
             title=title,
             reference_type="message",
             reference_id=ctx["message_id"],
+            dedupe_key=f"sms_status:{ctx['message_id']}:{kind}",
+            now=self.now(),
         )
 
     # -- reconciliation --------------------------------------------------------------------

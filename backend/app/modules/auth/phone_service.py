@@ -38,6 +38,7 @@ from app.modules.auth.schemas import (
     SimulatedSmsMessage,
 )
 from app.modules.auth.service import AuthService, RequestMeta
+from app.modules.notifications.service import create_notification
 from app.modules.rate_limits import service as limits
 from app.modules.rate_limits.service import RateLimiter
 
@@ -248,6 +249,13 @@ class PhoneVerificationService:
                     ip=meta.ip,
                     metadata={"phone": mask_phone(e164), "mode": mode},
                 )
+                await create_notification(
+                    session,
+                    user_id=user.id,
+                    notification_type="security",
+                    title="A mobile number was verified on your account",
+                    body=f"{mask_phone(e164)} can now send SMS from your account.",
+                )
             await phones.flush()
             # Failed attempts must persist, so the transaction commits before raising.
 
@@ -272,6 +280,12 @@ class PhoneVerificationService:
                 raise NotFoundError("There is no verified number to remove.")
             await self._audit.record(
                 session, category="auth", action="phone.removed", actor_id=user.id, ip=meta.ip
+            )
+            await create_notification(
+                session,
+                user_id=user.id,
+                notification_type="security",
+                title="A mobile number was removed from your account",
             )
 
     def simulated_inbox(self, user: AuthenticatedUser) -> list[SimulatedSmsMessage]:

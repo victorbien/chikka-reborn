@@ -42,6 +42,7 @@ from app.modules.chat.attachments import (
     check_attachment,
     safe_file_name,
 )
+from app.modules.chat.context import ContextLine, ConversationAiContext
 from app.modules.chat.models import Message, MessageAttachment
 from app.modules.chat.repository import (
     ChatRepository,
@@ -65,6 +66,7 @@ from app.modules.chat.schemas import (
     UnreadTotals,
 )
 from app.modules.contacts.directory import ContactDirectory, Relationship
+from app.modules.notifications.service import create_notification
 from app.modules.profiles.models import Profile
 from app.modules.profiles.presence import PresenceRegistry
 from app.modules.profiles.schemas import PresencePreference
@@ -425,6 +427,19 @@ class ChatService:
 
     # -- messages --------------------------------------------------------------------------
 
+    async def ai_context(
+        self, user: AuthenticatedUser, conversation_id: UUID, limit: int
+    ) -> ConversationAiContext:
+        """Recent text messages for the AI assistant, oldest first. Members only (else 404)."""
+        async with self._db.transaction() as session:
+            repository = ChatRepository(session)
+            await self._member_or_404(repository, conversation_id, user.id)
+            if not await repository.ai_enabled_for(conversation_id, user.id):
+                return ConversationAiContext(ai_enabled=False, lines=[])
+            rows = await repository.recent_text(user.id, conversation_id, limit)
+        lines = [ContextLine(from_me=sender == user.id, text=body) for sender, body in rows]
+        return ConversationAiContext(ai_enabled=True, lines=list(reversed(lines)))
+
     async def list_messages(
         self,
         user: AuthenticatedUser,
@@ -537,6 +552,21 @@ class ChatService:
             if not suppressed:
                 await repository.insert_delivery(message.id, other, now)
                 await repository.unarchive_unmuted(conversation_id)
+                if not await repository.is_muted(conversation_id, other):
+                    sender = (await repository.profiles([user.id])).get(user.id)
+                    # Several unread messages from one chat fold into one notification.
+                    await create_notification(
+                        session,
+                        user_id=other,
+                        notification_type="new_message",
+                        title=f"New message from {sender.display_name if sender else 'someone'}",
+                        body=(request.body or "Sent an attachment")[:120],
+                        reference_type="conversation",
+                        reference_id=conversation_id,
+                        group_key=f"chat:{conversation_id}",
+                        dedupe_key=f"chat_message:{message.id}",
+                        now=now,
+                    )
             else:
                 await repository.set_archived(conversation_id, user.id, False)
             message = await repository.refresh_message(message)

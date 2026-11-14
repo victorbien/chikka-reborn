@@ -1,4 +1,6 @@
-﻿import { estimateSms } from "@/lib/sms";
+﻿import { Link } from "react-router-dom";
+import { estimateSms } from "@/lib/sms";
+import { paths } from "@/lib/paths";
 import type { Quote, Replies } from "@/features/sms/types";
 
 const REPLIES: Record<Replies, string> = {
@@ -34,13 +36,14 @@ export function SmsQuotePanel({
   const encoding = quote?.segment.encoding ?? (local.encoding === "gsm7" ? "gsm7" : "ucs2");
   const blockers = (quote?.blockers ?? []).filter((b) => b.code !== "consent_required");
   const cost = quote?.cost;
+  const balance = quote?.balance;
 
   let costText = "Cost unavailable";
   if (cost?.credits !== null && cost?.credits !== undefined) {
     costText = quote?.is_simulated
-      ? `Estimated ${cost.credits.toFixed(2)} credits (nothing is charged in simulation${
-          cost.source === "demo_default" ? ", demo rate" : ""
-        })`
+      ? `Estimated ${cost.credits.toFixed(2)} demo credits${
+          cost.source === "demo_default" ? " (demo rate)" : ""
+        }`
       : `Estimated ${cost.credits.toFixed(2)} credits`;
   }
 
@@ -51,6 +54,24 @@ export function SmsQuotePanel({
         {encoding === "gsm7" ? "GSM-7" : "Unicode"}
         {quote ? ` · ${costText}` : null}
       </p>
+      {balance?.charges_apply ? (
+        <p className="text-xs text-fg-muted">
+          Demo credits are charged only when the carrier accepts the message, and refunded if it
+          fails. You have {balance.available_credits.toFixed(2)}
+          {cost?.credits != null && balance.sufficient
+            ? `, ${Math.max(0, balance.available_credits - cost.credits).toFixed(2)} after this message`
+            : ""}
+          .{" "}
+          <Link to={paths.credits} className="text-accent underline">
+            Credit history
+          </Link>
+        </p>
+      ) : null}
+      {balance?.charges_apply && balance.is_low && balance.sufficient ? (
+        <p role="status" className="text-xs text-away">
+          Your demo credits are running low.
+        </p>
+      ) : null}
       {quote?.segment.too_long ? (
         <p role="alert" className="text-danger">
           This message needs {quote.segment.segments} segments. The limit here is{" "}

@@ -18,9 +18,12 @@ import {
 } from "@/routes/guards";
 import { AdminSmsPage } from "@/routes/AdminSmsPage";
 import { ContactsPage } from "@/routes/ContactsPage";
+import { CreditsPage } from "@/routes/CreditsPage";
 import { HomePage } from "@/routes/HomePage";
 import { MessagesPage, NewConversationPage } from "@/routes/MessagesPage";
 import { NotFoundPage } from "@/routes/NotFoundPage";
+import { NotificationSettingsPage } from "@/routes/NotificationSettingsPage";
+import { NotificationsPage } from "@/routes/NotificationsPage";
 import { ProfileSettingsPage, ProfileSetupPage } from "@/routes/ProfilePages";
 import { RouteErrorPage } from "@/routes/RouteErrorPage";
 import { SmsPage } from "@/routes/SmsPage";
@@ -73,6 +76,9 @@ export const appRoutes: RouteObject[] = [
                   },
                   { path: paths.adminSms, element: <AdminSmsPage /> },
                   { path: paths.settings, element: <ProfileSettingsPage /> },
+                  { path: paths.notifications, element: <NotificationsPage /> },
+                  { path: paths.notificationSettings, element: <NotificationSettingsPage /> },
+                  { path: paths.credits, element: <CreditsPage /> },
                 ],
               },
             ],

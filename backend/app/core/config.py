@@ -6,6 +6,8 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 AppEnvironment = Literal["development", "test", "staging", "production"]
 SmsProviderMode = Literal["mock", "live"]
+AiProviderMode = Literal["mock", "bedrock"]
+EmailProviderMode = Literal["mock", "smtp"]
 
 
 class Settings(BaseSettings):
@@ -68,6 +70,29 @@ class Settings(BaseSettings):
     sms_queue_max_age_seconds: int = Field(default=86400, ge=60)
     sms_attestation_version: str = "2026-11-01"
 
+    # AI assistant. "mock" returns canned drafts and calls nothing external. "bedrock" calls
+    # Amazon Bedrock and refuses to start when it is not fully configured.
+    ai_provider_mode: AiProviderMode = "mock"
+    bedrock_region: str | None = None
+    bedrock_model_id: str | None = None
+    # Backend-only Bedrock API key (sent as a bearer token). Never logged or sent to the browser.
+    bedrock_api_key: SecretStr | None = None
+    ai_timeout_seconds: float = Field(default=15.0, gt=0, le=60)
+    ai_max_output_tokens: int = Field(default=600, ge=50, le=4000)
+
+    # Notifications: the worker announces new notifications to open sessions and sends emails.
+    notifications_worker_enabled: bool = True
+    notifications_worker_poll_seconds: float = Field(default=1.0, gt=0, le=60)
+    # "mock" sends nothing. "smtp" needs SMTP_HOST and EMAIL_FROM_ADDRESS and fails at startup
+    # without them; it never falls back to the mock.
+    email_provider_mode: EmailProviderMode = "mock"
+    email_from_address: str | None = None
+    smtp_host: str | None = None
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_username: str | None = None
+    smtp_password: SecretStr | None = None
+    smtp_starttls: bool = True
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_origins(cls, value: object) -> object:
@@ -95,6 +120,13 @@ class Settings(BaseSettings):
         "twilio_auth_token",
         "sms_public_base_url",
         "sms_mock_webhook_secret",
+        "bedrock_region",
+        "bedrock_model_id",
+        "bedrock_api_key",
+        "email_from_address",
+        "smtp_host",
+        "smtp_username",
+        "smtp_password",
         mode="before",
     )
     @classmethod
@@ -138,6 +170,38 @@ class Settings(BaseSettings):
             ]
             if missing:
                 raise ValueError("SMS_PROVIDER_MODE=live requires " + ", ".join(missing))
+        return self
+
+    @model_validator(mode="after")
+    def _smtp_requires_configuration(self) -> Self:
+        if self.email_provider_mode == "smtp":
+            missing = [
+                name
+                for name, value in (
+                    ("SMTP_HOST", self.smtp_host),
+                    ("EMAIL_FROM_ADDRESS", self.email_from_address),
+                )
+                if value is None
+            ]
+            if missing:
+                raise ValueError("EMAIL_PROVIDER_MODE=smtp requires " + ", ".join(missing))
+        return self
+
+    @model_validator(mode="after")
+    def _bedrock_requires_configuration(self) -> Self:
+        # Same rule as live SMS: fail at startup, never fall back to the mock silently.
+        if self.ai_provider_mode == "bedrock":
+            missing = [
+                name
+                for name, value in (
+                    ("BEDROCK_REGION", self.bedrock_region),
+                    ("BEDROCK_MODEL_ID", self.bedrock_model_id),
+                    ("BEDROCK_API_KEY", self.bedrock_api_key),
+                )
+                if value is None
+            ]
+            if missing:
+                raise ValueError("AI_PROVIDER_MODE=bedrock requires " + ", ".join(missing))
         return self
 
     @model_validator(mode="after")

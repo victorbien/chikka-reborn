@@ -501,6 +501,7 @@ class WebhookService:
                     reference_type="message",
                     reference_id=message_id,
                     group_key=f"sms:{conversation_id}",
+                    dedupe_key=f"sms_inbound:{message_id}",
                 )
             effects.created.add(message_id)
             await finish("routed", message_id=message_id)

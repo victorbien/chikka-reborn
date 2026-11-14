@@ -71,6 +71,17 @@ export interface Quote {
     source: "configured" | "demo_default" | "unavailable";
     estimated: true;
   };
+  /** Simulated credits: what you have and whether this send is covered. */
+  balance: {
+    ledger: "demo" | "live";
+    is_simulated: boolean;
+    available_units: number;
+    available_credits: number;
+    /** Null when the cost is unknown. False means the send would be refused. */
+    sufficient: boolean | null;
+    charges_apply: boolean;
+    is_low: boolean;
+  };
   consent: { required: boolean; granted: boolean; notice_version: string };
   recipient_opted_out: boolean;
   blockers: { code: string; message: string }[];

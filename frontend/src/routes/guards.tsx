@@ -7,6 +7,10 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { ADMIN_NAV_ITEMS, MAIN_NAV_ITEMS, PUBLIC_NAV_ITEMS } from "@/components/navigation/MainNav";
 import { SignOutButton } from "@/features/auth/components/SignOutButton";
 import { ChatRealtimeBridge } from "@/features/chat/components/ChatRealtimeBridge";
+import { CreditBadge } from "@/features/credits/components/CreditBadge";
+import { CreditsRealtimeBridge } from "@/features/credits/components/CreditsRealtimeBridge";
+import { NotificationBell } from "@/features/notifications/components/NotificationBell";
+import { NotificationRealtimeBridge } from "@/features/notifications/components/NotificationRealtimeBridge";
 import { usePresence } from "@/features/profile/hooks/usePresenceHeartbeat";
 import { useMe } from "@/features/profile/hooks/useProfile";
 import { useSession } from "@/lib/auth/session";
@@ -91,6 +95,8 @@ export function SignedInAppLayout() {
     // One real-time connection for the whole signed-in app (active accounts only).
     <RealtimeProvider enabled={me.data?.status === "active" && me.data.onboarding_completed}>
       <ChatRealtimeBridge />
+      <NotificationRealtimeBridge />
+      <CreditsRealtimeBridge />
       <AppLayout
         navItems={
           me.data?.role === "admin" ? [...MAIN_NAV_ITEMS, ...ADMIN_NAV_ITEMS] : MAIN_NAV_ITEMS
@@ -98,6 +104,8 @@ export function SignedInAppLayout() {
         headerActions={
           me.data ? (
             <>
+              <CreditBadge />
+              <NotificationBell />
               <span className="flex items-center gap-2 text-sm">
                 <Avatar
                   name={me.data.display_name}

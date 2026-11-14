@@ -10,11 +10,13 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from app.core.config import Settings
+from app.integrations.ai.base import AiProvider
 from app.integrations.auth_provider import (
     AuthProvider,
     SupabaseAuthProvider,
     UnconfiguredAuthProvider,
 )
+from app.integrations.email.base import EmailProvider
 from app.integrations.otp_delivery import (
     OtpDelivery,
     SimulatedInbox,
@@ -45,13 +47,24 @@ class Providers:
     # Chosen once from configuration (integrations/sms/factory.py). None means "build from
     # settings"; create_app fills it in, so a live failure surfaces at startup.
     sms: SmsProvider | None = None
+    # Same rule for AI: filled in by create_app so a Bedrock misconfiguration fails at startup.
+    ai: AiProvider | None = None
+    # Notification email. Filled in by create_app, same rule as sms and ai.
+    email: EmailProvider | None = None
     # Time source for the SMS subsystem. Tests replace it so retries and timelines are exact.
     clock: Callable[[], datetime] = lambda: datetime.now(UTC)
     # Seeded in tests so retry jitter is deterministic.
     rng: random.Random | None = None
 
     async def aclose(self) -> None:
-        for provider in (self.auth, self.storage, self.attachment_storage, self.sms):
+        for provider in (
+            self.auth,
+            self.storage,
+            self.attachment_storage,
+            self.sms,
+            self.ai,
+            self.email,
+        ):
             close = getattr(provider, "aclose", None)
             if close is not None:
                 await close()

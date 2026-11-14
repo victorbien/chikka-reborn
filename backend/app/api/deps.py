@@ -15,12 +15,15 @@ from app.core.exceptions import (
 )
 from app.core.security import AuthenticatedUser, TokenClaims, decode_access_token
 from app.database.session import Database, require_database, session_scope
+from app.modules.ai.service import AiService
 from app.modules.audit.service import AuditLogger
 from app.modules.auth.account_service import AccountResolver, AccountService
 from app.modules.auth.phone_service import PhoneVerificationService
 from app.modules.auth.service import AuthService, RequestMeta
 from app.modules.chat.service import ChatService
 from app.modules.contacts.service import ContactService
+from app.modules.credits.service import CreditService
+from app.modules.notifications.service import NotificationService
 from app.modules.profiles.service import ProfileService
 from app.modules.rate_limits.service import RateLimiter
 from app.modules.sms.admin_service import AdminSmsService
@@ -203,6 +206,57 @@ def get_chat_service(
 
 
 ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
+
+
+def get_notification_service(
+    database: RequiredDatabaseDep, providers: ProvidersDep, audit: AuditLoggerDep
+) -> NotificationService:
+    return NotificationService(
+        database=database,
+        audit=audit,
+        email_simulated=providers.email is None or providers.email.is_simulated,
+        clock=providers.clock,
+    )
+
+
+NotificationServiceDep = Annotated[NotificationService, Depends(get_notification_service)]
+
+
+def get_credit_service(
+    settings: SettingsDep,
+    database: RequiredDatabaseDep,
+    providers: ProvidersDep,
+    audit: AuditLoggerDep,
+) -> CreditService:
+    return CreditService(settings=settings, database=database, audit=audit, clock=providers.clock)
+
+
+CreditServiceDep = Annotated[CreditService, Depends(get_credit_service)]
+
+
+def get_ai_service(
+    settings: SettingsDep,
+    database: RequiredDatabaseDep,
+    providers: ProvidersDep,
+    limiter: RateLimiterDep,
+    audit: AuditLoggerDep,
+    chat: ChatServiceDep,
+) -> AiService:
+    if providers.ai is None:
+        raise ServiceUnavailableError(
+            "The AI assistant is unavailable right now.", details={"reason": "ai_not_running"}
+        )
+    return AiService(
+        settings=settings,
+        database=database,
+        provider=providers.ai,
+        limiter=limiter,
+        chat=chat,
+        audit=audit,
+    )
+
+
+AiServiceDep = Annotated[AiService, Depends(get_ai_service)]
 
 
 def get_sms_gateway(request: Request) -> SmsGateway:

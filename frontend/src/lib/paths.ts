@@ -14,5 +14,8 @@ export const paths = {
   sms: "/sms",
   smsNew: "/sms/new",
   adminSms: "/admin/sms",
+  notifications: "/notifications",
+  notificationSettings: "/settings/notifications",
+  credits: "/credits",
   settings: "/settings/profile",
 } as const;

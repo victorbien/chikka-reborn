@@ -66,7 +66,7 @@ export function SendConfirmDialog({
               {credits === null
                 ? "cost unavailable"
                 : `estimated ${credits.toFixed(2)} credits${
-                    quote.is_simulated ? " (not charged)" : ""
+                    quote.is_simulated ? " demo credits, charged when accepted" : ""
                   }`}
             </dd>
           </div>

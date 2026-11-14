@@ -86,6 +86,13 @@ class ServiceUnavailableError(AppError):
     code = "service_unavailable"
 
 
+class BadGatewayError(AppError):
+    """An upstream provider (for example the AI model) failed. The message is generic."""
+
+    status_code = 502
+    code = "provider_error"
+
+
 def error_response(
     status_code: int,
     code: str,

@@ -34,6 +34,9 @@ from app.core.security import AuthenticatedUser
 from app.database.session import Database
 from app.integrations.sms.base import SmsProvider
 from app.modules.audit.service import AuditLogger
+from app.modules.credits import ledger as credit_ledger
+from app.modules.credits.ledger import InsufficientCreditsError
+from app.modules.credits.service import balance_hint
 from app.modules.rate_limits.service import Limit, RateLimiter
 from app.modules.sms.capabilities import (
     Capability,
@@ -109,6 +112,8 @@ class Evaluation:
     consent_granted: bool
     opted_out: bool
     sender_verified: bool
+    available_units: int = 0
+    credit_threshold: int = 500
     blockers: list[Blocker] = field(default_factory=list)
 
 
@@ -121,6 +126,8 @@ def _raise(blocker: Blocker) -> AppError:
         return PermissionDeniedError(blocker.message, code=blocker.code)
     if blocker.status == 503:
         return ServiceUnavailableError(blocker.message, code=blocker.code)
+    if blocker.status == 402:
+        return InsufficientCreditsError(blocker.message)
     return UnprocessableError(
         blocker.message,
         code=blocker.code,
@@ -295,6 +302,8 @@ class SmsService:
             live=self._live,
             demo_units_per_segment=int(demo) if isinstance(demo, int) else None,
         )
+        simulated = self._provider.is_simulated
+        available, threshold = await repository.credit_state(user.id) if simulated else (0, 500)
         verified = await repository.has_verified_phone(user.id, self._verification_mode)
         opted_out = await repository.is_opted_out(destination.e164)
         consent_required = capability.consent_required if capability else True
@@ -339,6 +348,15 @@ class SmsService:
                     "Confirm you have this person's permission to text them before sending.",
                 )
             )
+        if simulated and cost.units is not None and cost.units > available:
+            blockers.append(
+                Blocker(
+                    "insufficient_credits",
+                    f"This message costs {cost.units / 100:.2f} demo credits and you have "
+                    f"{max(available, 0) / 100:.2f}.",
+                    402,
+                )
+            )
         return Evaluation(
             cfg=cfg,
             capability=capability,
@@ -351,6 +369,8 @@ class SmsService:
             consent_granted=consent_granted,
             opted_out=opted_out,
             sender_verified=verified,
+            available_units=available,
+            credit_threshold=threshold,
             blockers=blockers,
         )
 
@@ -360,6 +380,12 @@ class SmsService:
         segment = evaluation.segment
         units = evaluation.cost_units
         return QuoteOut(
+            balance=balance_hint(
+                available_units=evaluation.available_units,
+                cost_units=units,
+                is_simulated=self._provider.is_simulated,
+                threshold_units=evaluation.credit_threshold,
+            ),
             recipient=RecipientOut(
                 masked_phone=mask_phone(destination.e164),
                 country_code=destination.country_code,
@@ -610,6 +636,11 @@ class SmsService:
             request_hash=digest,
             is_simulated=self._provider.is_simulated,
             capability_id=evaluation.capability.id if evaluation.capability else None,
+            credit_cost_units=(
+                evaluation.cost_units
+                if self._provider.is_simulated and evaluation.cost_units
+                else None
+            ),
         )
         delivery_id = await repository.insert_first_delivery(
             message_id=message_id,
@@ -618,6 +649,9 @@ class SmsService:
             is_simulated=self._provider.is_simulated,
             next_attempt_at=self._clock(),
         )
+        # Hold the estimated demo cost. A shortfall that appeared since the check refuses the
+        # send and rolls the whole message back.
+        await credit_ledger.reserve(session, message_id, provider=self._provider.name)
         await repository.unarchive(conversation_id, user.id)
         await self._audit.record(
             session,

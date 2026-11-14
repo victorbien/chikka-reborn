@@ -205,6 +205,18 @@ These decisions are blocking or will block phase starts. Each has a `Due By` dat
 **Decision:** All public-facing surfaces of Chikka Reborn must clearly identify it as an independent, Chikka-inspired project. It must not imply official affiliation with or endorsement by the original Chikka owners or their telecom partners.  
 **Implementation:** Disclaimer in README.md, product-vision.md, product-overview.md, and all marketing materials.
 
+### DEC-ARCH-AI-001 - AI Assistant (Module F)
+**Date:** November 2026  
+**Status:** Decided  
+**Decision:** Implemented as ADL-021: `AiProvider` abstraction with mock (default) and Bedrock (Converse over `httpx`, API key, no new dependency); opt-in per user (default off); drafts only; masked minimal context; metadata-only logging; server-side segment checks for SMS optimisation.  
+**Open items:** OD-002 model choice; SigV4/IAM support if required; recording AI assistance on sent messages.
+
+### DEC-ARCH-NOTIF-001 - Notifications and Simulated Credits (Modules G and H)
+**Date:** November 2026  
+**Status:** Decided. Supersedes the Phase 2 rule "simulation never charges" (OD-009) for the demo ledger.  
+**Decision:** ADL-022. Simulated SMS reserve, spend and refund demo credits in an append-only ledger; real credit is never touched and live SMS is not metered until payments exist. Notifications are deduplicated by event key, grouped per chat, delivered after commit by an outbox dispatcher, with email through a configurable provider.  
+**Open items:** admin UI for adjustments; purge job; web push; payments (out of scope).
+
 ---
 
 ## Decision Log Management

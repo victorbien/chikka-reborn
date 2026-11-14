@@ -17,7 +17,7 @@ from app.modules.audit.repository import AuditRepository
 
 logger = logging.getLogger(__name__)
 
-AuditCategory = Literal["auth", "consent", "privacy", "security", "sms", "admin"]
+AuditCategory = Literal["auth", "consent", "privacy", "security", "sms", "admin", "credit"]
 AuditOutcome = Literal["success", "denied", "failure"]
 
 

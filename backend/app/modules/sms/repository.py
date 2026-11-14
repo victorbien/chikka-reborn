@@ -15,6 +15,8 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.credits import ledger as credit_ledger
+from app.modules.credits.repository import CreditRepository
 from app.modules.sms.capabilities import Capability
 
 
@@ -349,6 +351,11 @@ class SmsRepository:
         row = result.mappings().first()
         return dict(row) if row else None
 
+    async def credit_state(self, user_id: UUID) -> tuple[int, int]:
+        """(available demo units, low-balance threshold) for the quote and the send check."""
+        available = await credit_ledger.available_units(self._session, user_id, "demo")
+        return available, await CreditRepository(self._session).threshold(user_id)
+
     async def insert_outbound_message(
         self,
         *,
@@ -362,6 +369,7 @@ class SmsRepository:
         request_hash: str,
         is_simulated: bool,
         capability_id: UUID | None,
+        credit_cost_units: int | None = None,
     ) -> UUID:
         result = await self._session.execute(
             text(
@@ -369,10 +377,10 @@ class SmsRepository:
                 insert into public.messages
                     (conversation_id, channel, direction, sender_user_id, body, encoding,
                      char_count, segment_count, status, idempotency_key, request_hash,
-                     is_simulated, capability_id)
+                     is_simulated, capability_id, credit_cost_units)
                 values
                     (:c, 'sms', 'outbound', :u, :body, :enc, :chars, :segs, 'queued', :k, :h,
-                     :sim, :cap)
+                     :sim, :cap, :cost)
                 returning id
                 """
             ),
@@ -387,6 +395,7 @@ class SmsRepository:
                 "h": request_hash,
                 "sim": is_simulated,
                 "cap": capability_id,
+                "cost": credit_cost_units,
             },
         )
         return UUID(str(result.scalar_one()))

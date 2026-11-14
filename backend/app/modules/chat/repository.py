@@ -130,6 +130,17 @@ class ChatRepository:
             .values(is_archived=archived)
         )
 
+    async def is_muted(self, conversation_id: UUID, user_id: UUID) -> bool:
+        result = await self._session.execute(
+            text(
+                "select muted_indefinitely or coalesce(muted_until > now(), false) "
+                "from public.conversation_members "
+                "where conversation_id = :conversation_id and user_id = :user_id"
+            ),
+            {"conversation_id": conversation_id, "user_id": user_id},
+        )
+        return bool(result.scalar_one_or_none())
+
     async def unarchive_unmuted(self, conversation_id: UUID) -> None:
         """A new message brings an archived conversation back, unless it is muted."""
         now = datetime.now(UTC)
@@ -385,6 +396,36 @@ class ChatRepository:
         messages = list(rows)
         # "More before" only applies when paging backwards; forward sync fetches until empty.
         return messages, more if after_seq is None else False
+
+    async def ai_enabled_for(self, conversation_id: UUID, user_id: UUID) -> bool:
+        result = await self._session.execute(
+            text(
+                "select ai_enabled from public.conversation_members "
+                "where conversation_id = :conversation_id and user_id = :user_id"
+            ),
+            {"conversation_id": conversation_id, "user_id": user_id},
+        )
+        return bool(result.scalar_one_or_none())
+
+    async def recent_text(
+        self, viewer: UUID, conversation_id: UUID, limit: int
+    ) -> list[tuple[UUID | None, str]]:
+        """Newest-first (sender, body) pairs the viewer may see. Text only; no side effects."""
+        statement = text(
+            f"""
+            select m.sender_user_id, m.body from public.messages m
+            join public.conversation_members cm
+              on cm.conversation_id = m.conversation_id and cm.user_id = :viewer
+            where m.conversation_id = :conversation_id
+              and m.body is not null and m.deleted_for_everyone_at is null and {_VISIBLE}
+            order by m.seq desc
+            limit :limit
+            """
+        )
+        rows = await self._session.execute(
+            statement, {"viewer": viewer, "conversation_id": conversation_id, "limit": limit}
+        )
+        return [(row[0], str(row[1])) for row in rows]
 
     async def message_for_viewer(self, viewer: UUID, message_id: UUID) -> Message | None:
         statement = text(

@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.sanitize import clean_text
+from app.modules.credits.schemas import BalanceHint
 
 MAX_SMS_BODY_CHARS = 1600
 
@@ -149,6 +150,8 @@ class BlockerOut(BaseModel):
 
 
 class QuoteOut(BaseModel):
+    # Simulated credits only: what you have and whether this send is covered.
+    balance: BalanceHint
     recipient: RecipientOut
     mode: Literal["simulation", "live"]
     is_simulated: bool

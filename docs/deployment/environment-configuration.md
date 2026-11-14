@@ -87,14 +87,37 @@ These variables are validated at startup when `SMS_PROVIDER_MODE=live`. The appl
 | `SMS_ATTESTATION_VERSION` | `2026-11-01` | Version of the sender-permission wording recorded with each consent |
 
 Retry attempts, backoff and rate limits are not environment variables: they live in `provider_configurations` and `system_settings` so administrators can change them (`max_retry_attempts`, `retry_base_seconds`, `retry_cap_seconds`, `sms_user_limit_per_hour`, `sms_recipient_limit_per_hour`).
-### Required — AI Features (Phase 3+)
+### Optional - Notifications and email
 
-| Variable | Description |
-|---|---|
-| `AWS_REGION` | AWS region where Bedrock is available (e.g. `us-east-1`) |
-| `AWS_ACCESS_KEY_ID` | IAM user access key — Bedrock invoke permissions only |
-| `AWS_SECRET_ACCESS_KEY` | IAM user secret key |
-| `BEDROCK_MODEL_ID` | Model identifier (e.g. `anthropic.claude-3-haiku-20240307-v1:0`) |
+Notification email defaults to the mock provider: nothing is sent to a real mailbox. `EMAIL_PROVIDER_MODE=smtp` needs `SMTP_HOST` and `EMAIL_FROM_ADDRESS` and fails at startup without them; it never falls back to the mock.
+
+| Variable | Default | Description |
+|---|---|---|
+| `EMAIL_PROVIDER_MODE` | `mock` | `mock` or `smtp` |
+| `EMAIL_FROM_ADDRESS` | none | Sender address. Required for `smtp` |
+| `SMTP_HOST` | none | SMTP server. Required for `smtp` |
+| `SMTP_PORT` | `587` | SMTP port |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | none | Credentials, if the server needs them. Backend only, never logged |
+| `SMTP_STARTTLS` | `true` | Upgrade the connection with STARTTLS |
+| `NOTIFICATIONS_WORKER_ENABLED` | `true` | Runs the dispatcher that announces notifications to open sessions and sends email. Tests turn it off |
+| `NOTIFICATIONS_WORKER_POLL_SECONDS` | `1` | How often the dispatcher looks for new work |
+
+Simulated credit amounts are not environment variables: `system_settings.demo_grant_units` (default 5000, so 50 credits) and `sms_demo_units_per_segment` (default 100) are administrator settings, and each user sets their own low-balance threshold in notification settings.
+
+### Optional - AI assistant
+
+The assistant defaults to the mock provider: it calls nothing external and returns canned demo drafts, which the UI labels as a demo. `AI_PROVIDER_MODE=bedrock` needs all three Bedrock values below; startup fails without them and never falls back to the mock. Credentials are backend-only.
+
+| Variable | Default | Description |
+|---|---|---|
+| `AI_PROVIDER_MODE` | `mock` | `mock` or `bedrock` |
+| `BEDROCK_REGION` | none | AWS region where the model is enabled (for example `us-east-1`). Required for `bedrock` |
+| `BEDROCK_MODEL_ID` | none | Bedrock model identifier. Required for `bedrock`. Check that it handles Filipino and the regional languages you offer |
+| `BEDROCK_API_KEY` | none | Bedrock API key, sent as a bearer token to the Converse API. Required for `bedrock`. Never logged, never sent to the browser |
+| `AI_TIMEOUT_SECONDS` | `15` | Per-request timeout for the model call |
+| `AI_MAX_OUTPUT_TOKENS` | `600` | Upper bound on the model's answer length |
+
+The kill switch (`system_settings.ai_enabled`) and the per-user hourly limit (`system_settings.ai_user_limit_per_hour`, default 30) are runtime settings, not environment variables. Each user also has to turn the assistant on for their own account (`profiles.ai_enabled`, default off).
 
 ### Optional — Tuning
 
@@ -147,10 +170,19 @@ TWILIO_AUTH_TOKEN=
 SMS_PUBLIC_BASE_URL=
 
 # ─── AI (Phase 3+) ───────────────────────────────────────────
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
+EMAIL_PROVIDER_MODE=mock
+# Required only when EMAIL_PROVIDER_MODE=smtp:
+EMAIL_FROM_ADDRESS=
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USERNAME=
+SMTP_PASSWORD=
+
+AI_PROVIDER_MODE=mock
+# Required only when AI_PROVIDER_MODE=bedrock:
+BEDROCK_REGION=
 BEDROCK_MODEL_ID=
+BEDROCK_API_KEY=
 
 # ─── Application ─────────────────────────────────────────────
 LOG_LEVEL=DEBUG
@@ -206,7 +238,7 @@ This prevents the application from running in a silently broken state.
 | `SUPABASE_JWT_SECRET` | Suspected compromise | Rotate in Supabase dashboard; update backend env var; all sessions invalidated |
 | `TWILIO_AUTH_TOKEN` | Annually; suspected exposure | Rotate in Twilio console; update hosting env var |
 | `TWILIO_AUTH_TOKEN` (also signs webhooks) | Annually, or at once if exposed | Rotate in the Twilio console; update the hosting env var; restart. Webhooks signed with the old token fail until then |
-| `AWS_ACCESS_KEY_ID` / `SECRET` | Quarterly; team member departure | Rotate in IAM; update hosting env var |
+| `BEDROCK_API_KEY` | Quarterly; team member departure | Rotate in IAM; update hosting env var |
 
 ---
 

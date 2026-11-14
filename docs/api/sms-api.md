@@ -134,6 +134,10 @@ Order of work: size limit (64 KB) -> per-IP rate limit -> signature check over t
 
 ---
 
+## Credits
+
+Simulated messages spend simulated demo credits; see [credits-api.md](credits-api.md). `POST /sms/quote` returns a `balance` object and an `insufficient_credits` blocker, and `POST /sms/messages` answers `402 insufficient_credits` when the demo balance cannot cover the message. The cost is held when the message is queued, spent when the provider accepts it, and returned if it fails. Live sends are not metered in this version.
+
 ## Revision History
 
 | Version | Date | Author | Notes |

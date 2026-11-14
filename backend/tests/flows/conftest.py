@@ -239,6 +239,8 @@ def build_harness(
         app_secret_key="test-only-app-secret-key-0123456789",  # type: ignore[arg-type]
         sms_mock_webhook_secret=MOCK_WEBHOOK_SECRET,  # type: ignore[arg-type]
         sms_worker_enabled=False,
+        # Tests drive the notification dispatcher explicitly (run_once), like the SMS worker.
+        notifications_worker_enabled=False,
         **{"sms_public_base_url": "https://api.example.test", **(settings_extra or {})},
     )
     clock = FakeClock()

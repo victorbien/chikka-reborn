@@ -153,9 +153,15 @@ Run the SMS tests with `pytest tests/flows/test_sms.py tests/flows/test_sms_live
 ---
 ## AI Assistant
 
-The AI assistant (powered by Amazon Bedrock) supports smart replies, translation, tone adjustment, rewriting, conversation summaries, and SMS length optimisation.
+The AI assistant supports smart replies, translation (English, Filipino, Spanish and other configured languages), rewriting and tone changes, conversation summaries with a chosen length, SMS length optimisation, and drafting a message from a short instruction. It runs through an `AiProvider` abstraction: `MockAiProvider` (default, canned demo drafts, nothing external) or Amazon Bedrock (`AI_PROVIDER_MODE=bedrock`, see [environment configuration](docs/deployment/environment-configuration.md)). Each user turns it on for their own account; it is off by default. See [docs/api/ai-api.md](docs/api/ai-api.md) and ADL-021.
 
 **AI-generated content must always be reviewed and approved by the user before sending. The AI assistant never transmits a message automatically.**
+
+## Notifications and Credits
+
+Notifications (messages, contact requests, SMS delivery, low credit, security and administrator notices) appear in the notification centre with an unread count, can be marked read, and are configured per type and channel (in-app, browser, email) with quiet hours. Browser notifications ask for permission only on a button press. Email goes through a configurable provider (`EMAIL_PROVIDER_MODE=mock` by default).
+
+SMS credits are **simulated**: simulated SMS spend demo credits from an append-only ledger (held when queued, spent when the provider accepts, refunded on failure). They are not money, there are no payments, and real credit is never touched. See [docs/api/notifications-api.md](docs/api/notifications-api.md) and [docs/api/credits-api.md](docs/api/credits-api.md).
 
 ---
 

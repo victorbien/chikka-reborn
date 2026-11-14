@@ -67,11 +67,11 @@ describe("MessageBubble", () => {
 });
 
 describe("SmsCostEstimate", () => {
-  it("charges nothing in simulation", () => {
+  it("uses demo credits only in simulation", () => {
     render(
       <SmsCostEstimate body="Hello" smsMode="simulated" creditsPerSegment={1} creditBalance={0} />,
     );
-    expect(screen.getByText(/No credits charged/)).toBeInTheDocument();
+    expect(screen.getByText(/Demo credits only/)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
   it("warns when live cost exceeds balance", () => {
