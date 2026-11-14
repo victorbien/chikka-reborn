@@ -116,6 +116,8 @@ The assistant defaults to the mock provider: it calls nothing external and retur
 | `BEDROCK_API_KEY` | none | Bedrock API key, sent as a bearer token to the Converse API. Required for `bedrock`. Never logged, never sent to the browser |
 | `AI_TIMEOUT_SECONDS` | `15` | Per-request timeout for the model call |
 | `AI_MAX_OUTPUT_TOKENS` | `600` | Upper bound on the model's answer length |
+| `AI_COST_PER_1K_INPUT_USD` | none | Optional list price per 1,000 input tokens. With the output price, lets the admin dashboard show an approximate AI cost. Unset means no cost is shown |
+| `AI_COST_PER_1K_OUTPUT_USD` | none | Optional list price per 1,000 output tokens |
 
 The kill switch (`system_settings.ai_enabled`) and the per-user hourly limit (`system_settings.ai_user_limit_per_hour`, default 30) are runtime settings, not environment variables. Each user also has to turn the assistant on for their own account (`profiles.ai_enabled`, default off).
 

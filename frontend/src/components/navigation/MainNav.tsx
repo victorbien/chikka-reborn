@@ -24,7 +24,7 @@ export const MAIN_NAV_ITEMS: readonly NavItem[] = [
 ];
 
 /** Shown to administrators in addition to the main items. */
-export const ADMIN_NAV_ITEMS: readonly NavItem[] = [{ to: paths.adminSms, label: "SMS admin" }];
+export const ADMIN_NAV_ITEMS: readonly NavItem[] = [{ to: paths.admin, label: "Admin" }];
 
 export function MainNav({ items = MAIN_NAV_ITEMS }: { items?: readonly NavItem[] }) {
   return (

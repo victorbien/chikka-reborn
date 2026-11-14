@@ -15,6 +15,7 @@ from app.core.exceptions import (
 )
 from app.core.security import AuthenticatedUser, TokenClaims, decode_access_token
 from app.database.session import Database, require_database, session_scope
+from app.modules.admin.service import AdminService
 from app.modules.ai.service import AiService
 from app.modules.audit.service import AuditLogger
 from app.modules.auth.account_service import AccountResolver, AccountService
@@ -305,6 +306,20 @@ def get_sms_admin_service(
 
 
 SmsAdminServiceDep = Annotated[AdminSmsService, Depends(get_sms_admin_service)]
+
+
+def get_admin_service(
+    request: Request,
+    settings: SettingsDep,
+    database: RequiredDatabaseDep,
+    audit: AuditLoggerDep,
+) -> AdminService:
+    # The dashboard still works when the SMS engine is down; it then reports "unavailable".
+    gateway: SmsGateway | None = getattr(request.app.state, "sms_gateway", None)
+    return AdminService(settings=settings, database=database, gateway=gateway, audit=audit)
+
+
+AdminServiceDep = Annotated[AdminService, Depends(get_admin_service)]
 AccountServiceDep = Annotated[AccountService, Depends(get_account_service)]
 PhoneServiceDep = Annotated[PhoneVerificationService, Depends(get_phone_service)]
 ProfileServiceDep = Annotated[ProfileService, Depends(get_profile_service)]
@@ -362,8 +377,30 @@ async def require_active_user(user: CurrentUserDep) -> AuthenticatedUser:
 ActiveUserDep = Annotated[AuthenticatedUser, Depends(require_active_user)]
 
 
-async def require_admin(user: ActiveUserDep) -> AuthenticatedUser:
+async def require_admin(
+    user: ActiveUserDep, request: Request, database: DatabaseDep
+) -> AuthenticatedUser:
+    """The role comes from the database (see AccountResolver), never from the request.
+
+    A refusal is audited in its own transaction so the attempt survives the failed request.
+    """
     if user.role != "admin":
+        if database is not None:
+            route = request.scope.get("route")
+            await AuditLogger(database).record_standalone(
+                category="security",
+                action="admin.access_denied",
+                outcome="denied",
+                actor_id=user.id,
+                actor_role=user.role,
+                target_type="endpoint",
+                target_id=None,
+                ip=request.client.host if request.client else None,
+                metadata={
+                    "method": request.method,
+                    "route": getattr(route, "path", None) or "unknown",
+                },
+            )
         raise PermissionDeniedError("You do not have permission to do this.")
     return user
 

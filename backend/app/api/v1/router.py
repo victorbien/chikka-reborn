@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1 import health
+from app.modules.admin.router import router as admin_router
 from app.modules.ai.router import router as ai_router
 from app.modules.auth.router import router as auth_router
 from app.modules.chat.router import router as chat_router
@@ -28,3 +29,4 @@ api_router.include_router(credits_admin_router)
 api_router.include_router(sms_router)
 api_router.include_router(sms_webhook_router)
 api_router.include_router(sms_admin_router)
+api_router.include_router(admin_router)

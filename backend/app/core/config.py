@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     bedrock_api_key: SecretStr | None = None
     ai_timeout_seconds: float = Field(default=15.0, gt=0, le=60)
     ai_max_output_tokens: int = Field(default=600, ge=50, le=4000)
+    # Optional list prices (USD per 1,000 tokens) so the admin dashboard can show an approximate
+    # cost. Unset means no cost figure is shown; nothing is guessed.
+    ai_cost_per_1k_input_usd: float | None = Field(default=None, ge=0)
+    ai_cost_per_1k_output_usd: float | None = Field(default=None, ge=0)
 
     # Notifications: the worker announces new notifications to open sessions and sends emails.
     notifications_worker_enabled: bool = True
@@ -127,6 +131,8 @@ class Settings(BaseSettings):
         "smtp_host",
         "smtp_username",
         "smtp_password",
+        "ai_cost_per_1k_input_usd",
+        "ai_cost_per_1k_output_usd",
         mode="before",
     )
     @classmethod

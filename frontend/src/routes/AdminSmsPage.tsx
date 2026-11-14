@@ -1,4 +1,5 @@
-﻿import { ErrorState } from "@/components/shared/ErrorState";
+﻿import { Link } from "react-router-dom";
+import { ErrorState } from "@/components/shared/ErrorState";
 import { useMe } from "@/features/profile/hooks/useProfile";
 import {
   CapabilitiesSection,
@@ -8,6 +9,7 @@ import {
   UnroutedSection,
 } from "@/features/sms/admin/AdminSmsPanels";
 import { useMonitoring } from "@/features/sms/admin/hooks";
+import { paths } from "@/lib/paths";
 
 /** SMS administration (Module J). The backend enforces the admin role; this page just does not
  *  pretend to be available to everyone else. Secrets are never loaded into the browser. */
@@ -26,6 +28,9 @@ export function AdminSmsPage() {
   }
   return (
     <div className="space-y-4">
+      <Link className="text-sm text-accent underline" to={paths.admin}>
+        Back to administration
+      </Link>
       <h1 className="text-xl font-semibold">SMS administration</h1>
       <MonitoringSection />
       <ProvidersSection />

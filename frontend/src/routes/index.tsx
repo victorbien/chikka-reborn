@@ -16,6 +16,14 @@ import {
   RequireOnboarded,
   SignedInAppLayout,
 } from "@/routes/guards";
+import {
+  AdminAiPage,
+  AdminAuditPage,
+  AdminLayout,
+  AdminMessagesPage,
+  AdminOverviewPage,
+  AdminUsersPage,
+} from "@/routes/AdminPages";
 import { AdminSmsPage } from "@/routes/AdminSmsPage";
 import { ContactsPage } from "@/routes/ContactsPage";
 import { CreditsPage } from "@/routes/CreditsPage";
@@ -73,6 +81,16 @@ export const appRoutes: RouteObject[] = [
                   {
                     path: `${paths.sms}/:conversationId`,
                     element: <SmsPage mode="conversation" />,
+                  },
+                  {
+                    element: <AdminLayout />,
+                    children: [
+                      { path: paths.admin, element: <AdminOverviewPage /> },
+                      { path: paths.adminUsers, element: <AdminUsersPage /> },
+                      { path: paths.adminMessages, element: <AdminMessagesPage /> },
+                      { path: paths.adminAi, element: <AdminAiPage /> },
+                      { path: paths.adminAudit, element: <AdminAuditPage /> },
+                    ],
                   },
                   { path: paths.adminSms, element: <AdminSmsPage /> },
                   { path: paths.settings, element: <ProfileSettingsPage /> },
