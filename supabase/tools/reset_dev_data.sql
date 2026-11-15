@@ -5,10 +5,10 @@
 --
 -- What is kept: the reference data that migrations install (system_settings,
 -- provider_configurations, sms_country_capabilities) and the schema itself.
--- What is not touched: files in Supabase Storage (avatars). Empty the "avatars" bucket from the
+-- What is not touched: files in Supabase Storage (avatars and chat attachments). Empty those buckets from the
 -- dashboard (Storage) if you want those gone too; Supabase blocks deleting them with SQL.
 --
--- Run it in the Supabase SQL editor (or psql), then run supabase/seed/01_dev_seed.sql.
+-- Run it in the Supabase SQL editor (or psql), then run the files in supabase/seed/ in order.
 -- Everything happens in one transaction: if any step fails, nothing is deleted.
 
 begin;
@@ -20,6 +20,7 @@ declare
         'profiles', 'phone_numbers', 'user_consents', 'contacts', 'contact_requests',
         'contact_groups', 'contact_group_members', 'user_blocks', 'abuse_reports',
         'conversations', 'conversation_members', 'messages', 'message_hides', 'message_segments',
+        'message_attachments',
         'message_deliveries', 'message_delivery_events', 'provider_webhooks', 'sms_routes',
         'sms_opt_outs', 'messaging_credits', 'credit_transactions', 'notification_preferences',
         'notifications', 'ai_assistance_logs', 'rate_limit_counters', 'audit_logs',
@@ -50,6 +51,7 @@ truncate table
     public.provider_webhooks,
     public.message_segments,
     public.message_hides,
+    public.message_attachments,
     public.ai_assistance_logs,
     public.abuse_reports,
     public.messages,

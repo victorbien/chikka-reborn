@@ -218,6 +218,12 @@ These decisions are blocking or will block phase starts. Each has a `Due By` dat
 **Decision:** ADL-022. Simulated SMS reserve, spend and refund demo credits in an append-only ledger; real credit is never touched and live SMS is not metered until payments exist. Notifications are deduplicated by event key, grouped per chat, delivered after commit by an outbox dispatcher, with email through a configurable provider.  
 **Open items:** admin UI for adjustments; purge job; web push; payments (out of scope).
 
+### DEC-UI-MODES-001 - Classic and Modern interfaces (Module K)
+**Date:** November 2026  
+**Status:** Decided  
+**Decision:** Both modes share every query, hook and service; they differ by CSS tokens and by the shell and `/messages` layout (`routes/modes/`). The mode is saved to `profiles.ui_mode` (no schema change) and cached in `localStorage`; the profile wins on sign-in, and a failed save reverts the mode. The first use of the already-pinned `@radix-ui/react-tooltip` and `@radix-ui/react-tabs` adds no dependency. The Modern side column uses `matchMedia` so only one AI assistant is mounted at a time.  
+**Open items:** Playwright is not set up, so desktop and mobile layouts are tested in Vitest by simulating viewport media queries; real-browser E2E and an axe scan still need to be added. `profiles.display_options` is unused.
+
 ---
 
 ## Decision Log Management

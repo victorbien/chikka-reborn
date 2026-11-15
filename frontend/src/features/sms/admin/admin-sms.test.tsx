@@ -208,13 +208,31 @@ describe("SMS administration", () => {
     const user = userEvent.setup();
     renderApp("/admin/sms");
     await user.type(await screen.findByLabelText("From (the phone replying)"), "+12025550142");
-    await user.type(screen.getByLabelText("To (our sender number)"), "+12025550190");
+    await user.type(screen.getByLabelText("To (our sender number, optional)"), "+12025550190");
     await user.type(screen.getByLabelText("Reply text"), "Okay po");
     await user.click(screen.getByRole("button", { name: "Simulate reply" }));
     expect(await screen.findByText(/Reply processed: routed/)).toBeInTheDocument();
     expect(api.callsTo("POST", `${BASE}/simulate/inbound`)[0]?.body).toEqual({
       from_phone: "+12025550142",
       to_number: "+12025550190",
+      body: "Okay po",
+    });
+  });
+
+  it("lets the administrator leave the sender number out", async () => {
+    const api = mockApi(
+      adminRoutes({
+        [`POST ${BASE}/simulate/inbound`]: ok({ duplicate: false, routing_result: "routed" }),
+      }),
+    );
+    const user = userEvent.setup();
+    renderApp("/admin/sms");
+    await user.type(await screen.findByLabelText("From (the phone replying)"), "+12025550142");
+    await user.type(screen.getByLabelText("Reply text"), "Okay po");
+    await user.click(screen.getByRole("button", { name: "Simulate reply" }));
+    expect(await screen.findByText(/Reply processed: routed/)).toBeInTheDocument();
+    expect(api.callsTo("POST", `${BASE}/simulate/inbound`)[0]?.body).toEqual({
+      from_phone: "+12025550142",
       body: "Okay po",
     });
   });

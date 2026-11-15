@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FormAlert } from "@/components/common/FormAlert";
 import { MessageComposer } from "@/components/shared/MessageComposer";
 import { formatSize } from "@/features/chat/format";
@@ -14,16 +14,44 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const ACCEPT = "image/jpeg,image/png,image/webp,image/gif,application/pdf";
 const ALLOWED = new Set(ACCEPT.split(","));
 
+/** Text handed to the composer from outside, e.g. an AI suggestion the user chose to use.
+ *  A new `id` replaces the draft. The user still has to press Send. */
+export interface ComposerSuggestion {
+  id: number;
+  text: string;
+}
+
 export interface ChatComposerProps {
   conversationId: string;
   onSend: (body: string, attachments: Attachment[]) => void;
   disabledReason?: string;
+  suggestion?: ComposerSuggestion | null;
+  /** Reports the draft so an assistant outside the composer can work on it. */
+  onDraftChange?: (draft: string) => void;
+  /** Hide the built-in AI assistant button when an assistant panel is shown elsewhere. */
+  showAiToggle?: boolean;
 }
 
 /** Text, emoji and attachments. Files upload when picked, so Send only links them. */
-export function ChatComposer({ conversationId, onSend, disabledReason }: ChatComposerProps) {
+export function ChatComposer({
+  conversationId,
+  onSend,
+  disabledReason,
+  suggestion = null,
+  onDraftChange,
+  showAiToggle = true,
+}: ChatComposerProps) {
   const [draft, setDraft] = useState("");
   const [aiAssisted, setAiAssisted] = useState(false);
+  const [appliedSuggestion, setAppliedSuggestion] = useState<number | null>(suggestion?.id ?? null);
+  if (suggestion && suggestion.id !== appliedSuggestion) {
+    setAppliedSuggestion(suggestion.id);
+    setDraft(suggestion.text);
+    setAiAssisted(true);
+  }
+  useEffect(() => {
+    onDraftChange?.(draft);
+  }, [draft, onDraftChange]);
   const [files, setFiles] = useState<Attachment[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
   const [uploading, setUploading] = useState(0);
@@ -74,17 +102,19 @@ export function ChatComposer({ conversationId, onSend, disabledReason }: ChatCom
 
   return (
     <>
-      <div className="border-t border-border bg-surface px-3 pt-2">
-        <AiAssistantToggle
-          draft={draft}
-          conversationId={conversationId}
-          channel="chat"
-          onUse={(text) => {
-            setDraft(text);
-            setAiAssisted(true);
-          }}
-        />
-      </div>
+      {showAiToggle ? (
+        <div className="border-t border-border bg-surface px-3 pt-2">
+          <AiAssistantToggle
+            draft={draft}
+            conversationId={conversationId}
+            channel="chat"
+            onUse={(text) => {
+              setDraft(text);
+              setAiAssisted(true);
+            }}
+          />
+        </div>
+      ) : null}
       <MessageComposer
         value={draft}
         onChange={changeDraft}

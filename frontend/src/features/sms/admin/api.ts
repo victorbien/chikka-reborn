@@ -1,4 +1,4 @@
-﻿import { apiClient, type ApiClient } from "@/lib/api/client";
+import { apiClient, type ApiClient } from "@/lib/api/client";
 import { unwrap, type Envelope } from "@/lib/api/envelope";
 import type { Paged } from "@/features/sms/types";
 
@@ -104,7 +104,7 @@ export function createAdminSmsApi(client: ApiClient = apiClient) {
       client.get<Paged<UnroutedInbound>>(`${BASE}/inbound/unrouted`, { signal }),
     simulateInbound: (payload: {
       from_phone: string;
-      to_number: string;
+      to_number?: string;
       body: string;
       replay_id?: string;
     }) =>

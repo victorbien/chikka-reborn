@@ -1,4 +1,4 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 
 /** Mirrors the backend limits; the server validates again. */
 export const retrySettingsSchema = z
@@ -16,7 +16,12 @@ const E164 = /^\+[1-9][0-9]{6,14}$/;
 
 export const simulateReplySchema = z.object({
   from_phone: z.string().regex(E164, "Use international format, for example +12025550142."),
-  to_number: z.string().regex(E164, "Use international format, for example +12025550190."),
+  to_number: z
+    .union([
+      z.literal(""),
+      z.string().regex(E164, "Use international format, for example +12025550190."),
+    ])
+    .optional(),
   body: z.string().min(1, "Write the reply.").max(1600),
 });
 

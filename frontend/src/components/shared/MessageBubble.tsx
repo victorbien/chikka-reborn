@@ -47,6 +47,7 @@ export function MessageBubble({
   return (
     <li className={cn("flex flex-col", outgoing ? "items-end" : "items-start")}>
       <article
+        data-bubble={outgoing ? "out" : "in"}
         aria-label={`${outgoing ? "You" : (senderName ?? "Contact")}, ${timestamp}`}
         className={cn(
           "max-w-[85%] rounded-bubble px-3 py-2 md:max-w-[70%] bevel",

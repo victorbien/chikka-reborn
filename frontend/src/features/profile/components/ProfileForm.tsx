@@ -122,12 +122,6 @@ export function ProfileForm({ profile }: { profile: Profile }) {
           <option value="light">Light</option>
         </Select>
       </FormField>
-      <FormField label="Interface" error={errors.ui_mode?.message}>
-        <Select {...form.register("ui_mode")}>
-          <option value="modern">Modern</option>
-          <option value="classic">Classic</option>
-        </Select>
-      </FormField>
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={!isDirty || update.isPending}>
           {update.isPending ? "Saving…" : "Save changes"}

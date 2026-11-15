@@ -11,6 +11,7 @@ import { CreditBadge } from "@/features/credits/components/CreditBadge";
 import { CreditsRealtimeBridge } from "@/features/credits/components/CreditsRealtimeBridge";
 import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 import { NotificationRealtimeBridge } from "@/features/notifications/components/NotificationRealtimeBridge";
+import { ModeToggle } from "@/features/profile/components/ModeToggle";
 import { usePresence } from "@/features/profile/hooks/usePresenceHeartbeat";
 import { useMe } from "@/features/profile/hooks/useProfile";
 import { useSession } from "@/lib/auth/session";
@@ -105,6 +106,7 @@ export function SignedInAppLayout() {
           me.data ? (
             <>
               <CreditBadge />
+              <ModeToggle />
               <NotificationBell />
               <span className="flex items-center gap-2 text-sm">
                 <Avatar

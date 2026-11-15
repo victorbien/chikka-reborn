@@ -1,4 +1,4 @@
-# Local end-to-end check of the auth module across real processes:
+# Local end-to-end check across real processes (auth, messaging, SMS, AI, administration journeys):
 #   PGlite (all migrations) -> fake Supabase Auth/Storage -> uvicorn backend -> frontend API client.
 # Simulation mode only. Nothing leaves 127.0.0.1. All secrets below are throwaway test values.
 $ErrorActionPreference = "Stop"

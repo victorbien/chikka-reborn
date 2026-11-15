@@ -521,6 +521,8 @@ describe("conversation list", () => {
     const user = userEvent.setup();
     renderApp("/messages/k-1");
     await user.click(await screen.findByRole("button", { name: "Archive" }));
+    const dialog = await screen.findByRole("dialog", { name: "Archive this conversation?" });
+    await user.click(within(dialog).getByRole("button", { name: "Archive" }));
     await waitFor(() => expect(api.callsTo("PATCH", CONVERSATION)).toHaveLength(1));
     expect(api.callsTo("PATCH", CONVERSATION)[0]?.body).toEqual({ is_archived: true });
     expect(await screen.findByRole("button", { name: "Unarchive" })).toBeInTheDocument();

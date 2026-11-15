@@ -510,14 +510,31 @@ class AdminSmsService:
                 "Reply simulation is only available in simulation mode outside production.",
                 code="simulation_unavailable",
             )
-        if not _E164.fullmatch(request.from_phone) or not _E164.fullmatch(request.to_number):
+        to_number = request.to_number
+        if not _E164.fullmatch(request.from_phone) or (
+            to_number is not None and not _E164.fullmatch(to_number)
+        ):
             raise UnprocessableError(
                 "Numbers must be in international format.", code="invalid_phone"
             )
+        if to_number is None:
+            # Administrators only ever see masked sender numbers, so the reply is addressed to
+            # the number that currently routes this contact's replies.
+            async with self._db.transaction() as session:
+                candidates = await AdminSmsRepository(session).active_platform_numbers(
+                    request.from_phone
+                )
+            if len(candidates) != 1:
+                raise UnprocessableError(
+                    "No single sender number routes replies from this number. "
+                    "Send a message to it first, or give the sender number.",
+                    code="route_not_unique" if candidates else "no_active_route",
+                )
+            to_number = candidates[0]
         event_id = request.replay_id or f"SIM-IN-{uuid.uuid4().hex[:16]}"
         callback = provider.build_inbound_callback(
             from_phone=request.from_phone,
-            to_number=request.to_number,
+            to_number=to_number,
             body=request.body,
             message_id=event_id,
         )

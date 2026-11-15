@@ -5,6 +5,7 @@ import { PageLoader } from "@/components/common/PageLoader";
 import { DeleteAccountSection } from "@/features/auth/components/DeleteAccountSection";
 import { SessionList } from "@/features/auth/components/SessionList";
 import { AvatarSection } from "@/features/profile/components/AvatarSection";
+import { PersistedModeSwitcher } from "@/features/profile/components/ModeToggle";
 import { OnboardingForm } from "@/features/profile/components/OnboardingForm";
 import { PhoneSection } from "@/features/profile/components/PhoneSection";
 import { PresenceSelector } from "@/features/profile/components/PresenceSelector";
@@ -72,6 +73,13 @@ export function ProfileSettingsPage() {
       </Section>
       <Section id="profile-heading" title="Profile">
         <ProfileForm profile={profile} />
+      </Section>
+      <Section id="messenger-style-heading" title="Messenger style">
+        <p className="text-sm text-fg-muted">
+          Classic is a compact buddy-list messenger. Modern is a roomy three-column layout with the
+          AI assistant. Your messages, contacts and settings are the same in both.
+        </p>
+        <PersistedModeSwitcher />
       </Section>
       <Section id="presence-heading" title="Status">
         <PresenceSelector profile={profile} />

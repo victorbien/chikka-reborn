@@ -1260,6 +1260,35 @@ def test_admin_can_simulate_a_reply_through_the_signed_path_and_replay_it(harnes
     assert len(stored) == 1 and stored[0]["is_simulated"] is True
 
 
+def test_simulated_reply_can_omit_the_sender_number(harness: Harness) -> None:
+    """Admins only see masked sender numbers, so the route supplies the right one."""
+    admin, admin_id = ready_to_send_admin(harness)
+    nobody = harness.client.post(
+        "/api/v1/admin/sms/simulate/inbound",
+        json={"from_phone": NUMBER, "body": "Too early"},
+        headers=admin,
+    )
+    assert nobody.status_code == 422
+    assert nobody.json()["error"]["code"] == "no_active_route"
+    send(harness, admin)
+    harness.run_worker()
+    reply_response = harness.client.post(
+        "/api/v1/admin/sms/simulate/inbound",
+        json={"from_phone": NUMBER, "body": "Found my way"},
+        headers=admin,
+    )
+    assert reply_response.status_code == 200, reply_response.text
+    assert reply_response.json()["data"]["routing_result"] == "routed"
+    stored = harness.sql(
+        "select m.is_simulated from public.messages m where m.body = 'Found my way'"
+    )
+    assert len(stored) == 1 and stored[0]["is_simulated"] is True
+    # The route belongs to this admin only; nobody else's thread received it.
+    other, _ = sms_user(harness)
+    assert harness.client.get("/api/v1/sms/conversations", headers=other).json()["data"] == []
+    assert platform_for(harness, admin_id)
+
+
 def ready_to_send_admin(harness: Harness) -> tuple[dict[str, str], str]:
     headers, user_id = admin_user(harness)
     consent(harness, headers, NUMBER)

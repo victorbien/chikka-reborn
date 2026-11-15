@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { formatListTime } from "@/features/chat/format";
 import { useConversations } from "@/features/chat/hooks/useChat";
 import type { ConversationSummary } from "@/features/chat/types";
+import { useArrowKeyNavigation } from "@/hooks/useArrowKeyNavigation";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { toUserFacingError } from "@/lib/error-handling";
 import { paths } from "@/lib/paths";
@@ -26,6 +27,8 @@ export function ConversationList({ selectedId }: { selectedId?: string }) {
   const debounced = useDebouncedValue(search, 300);
   const query = debounced.trim().length >= 2 ? debounced.trim() : "";
   const list = useConversations({ archived, q: query });
+  // Up/Down/Home/End move between conversations.
+  const onListKeyDown = useArrowKeyNavigation("li > button");
 
   return (
     <nav aria-label="Conversations" className="space-y-3">
@@ -93,7 +96,7 @@ export function ConversationList({ selectedId }: { selectedId?: string }) {
         />
       ) : null}
       {list.data && list.data.data.length > 0 ? (
-        <ul className="space-y-1">
+        <ul className="space-y-1" onKeyDown={onListKeyDown}>
           {list.data.data.map((conversation) => (
             <li key={conversation.id}>
               <ConversationItem

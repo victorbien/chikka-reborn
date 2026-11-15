@@ -91,7 +91,8 @@ class SimulateInboundRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     from_phone: str = Field(max_length=32)
-    to_number: str = Field(max_length=32)
+    # Omit it to use the one sender number that currently routes replies from `from_phone`.
+    to_number: str | None = Field(default=None, max_length=32)
     body: str = Field(max_length=MAX_SMS_BODY_CHARS)
     # Reuse an earlier id to replay the same event and test duplicate handling.
     replay_id: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9._:-]+$")

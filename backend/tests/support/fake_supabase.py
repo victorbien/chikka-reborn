@@ -363,6 +363,20 @@ class FakeSupabase:
                 ]
             )
 
+        @app.post("/__promote_admin")
+        async def promote_admin(email: str) -> Response:
+            """Test-only: make an existing user an administrator (needs the service key,
+            like every other fake endpoint). Mirrors the SQL the flow tests run."""
+            user = fake.users.get(email.lower())
+            if user is None:
+                return fake._error(404, "user_not_found")
+            async with fake._engine.begin() as conn:
+                await conn.execute(
+                    text("update public.profiles set role = 'admin' where id = cast(:id as uuid)"),
+                    {"id": user.id},
+                )
+            return Response(status_code=204)
+
         # -- storage ---------------------------------------------------------------------
 
         @app.post("/storage/v1/object/sign/{bucket}/{path:path}")

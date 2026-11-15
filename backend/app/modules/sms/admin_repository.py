@@ -246,6 +246,17 @@ class AdminSmsRepository:
         )
         return [dict(r) for r in result.mappings()], int(total)
 
+    async def active_platform_numbers(self, remote_number: str) -> list[str]:
+        """Platform numbers that currently route replies from this remote number to a user."""
+        result = await self._session.execute(
+            text(
+                "select distinct platform_number from public.sms_routes "
+                "where remote_number = :remote and status = 'active'"
+            ),
+            {"remote": remote_number},
+        )
+        return [str(row[0]) for row in result.all()]
+
     async def webhook_routing(self, provider: str, dedupe_key: str) -> str | None:
         result = await self._session.execute(
             text(

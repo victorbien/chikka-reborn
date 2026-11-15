@@ -103,16 +103,12 @@ describe("profile settings", () => {
     renderApp("/settings/profile");
     const bio = await screen.findByLabelText("Bio");
     await user.type(bio, "OFW in <b>Dubai</b>");
-    await user.selectOptions(screen.getByLabelText("Interface"), "classic");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     expect(await screen.findByText("Profile saved.")).toBeInTheDocument();
     expect(api.callsTo("PATCH", "/api/v1/users/me")[0]?.body).toEqual({
       bio: "OFW in Dubai",
-      ui_mode: "classic",
     });
-    // The saved interface mode is applied to the whole app.
-    await waitFor(() => expect(document.documentElement.dataset.mode).toBe("classic"));
   });
 
   it("validates the bio length and display name", async () => {

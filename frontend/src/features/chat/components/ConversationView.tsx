@@ -8,7 +8,11 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { PresenceIndicator } from "@/components/shared/PresenceIndicator";
 import { Button } from "@/components/ui/button";
-import { ChatComposer } from "@/features/chat/components/ChatComposer";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { Tip } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import type { PresenceStatus } from "@/lib/types";
+import { ChatComposer, type ComposerSuggestion } from "@/features/chat/components/ChatComposer";
 import { ConnectionBanner } from "@/features/chat/components/ConnectionBanner";
 import { MessageThread } from "@/features/chat/components/MessageThread";
 import {
@@ -24,9 +28,26 @@ import { useTypingUser } from "@/features/chat/typing-store";
 import { toUserFacingError } from "@/lib/error-handling";
 import { paths } from "@/lib/paths";
 
+const PRESENCE_WORDS: Record<PresenceStatus, string> = {
+  online: "(Online)",
+  away: "(Away)",
+  busy: "(Busy)",
+  offline: "(Offline)",
+  unknown: "",
+};
+
 export interface ConversationViewProps {
   conversationId: string;
   viewerId: string;
+  /** Classic shows a compact window title bar; Modern shows the roomy header. Same data. */
+  variant?: "modern" | "classic";
+  /** The viewer's nickname for this contact (Classic window title). */
+  nickname?: string | null;
+  /** Replaces the default minimum height, e.g. to fill a fixed-height column. */
+  className?: string;
+  suggestion?: ComposerSuggestion | null;
+  onDraftChange?: (draft: string) => void;
+  showAiToggle?: boolean;
 }
 
 function useVisible(): boolean {
@@ -41,7 +62,17 @@ function useVisible(): boolean {
   return visible;
 }
 
-export function ConversationView({ conversationId, viewerId }: ConversationViewProps) {
+export function ConversationView({
+  conversationId,
+  viewerId,
+  variant = "modern",
+  nickname,
+  className,
+  suggestion,
+  onDraftChange,
+  showAiToggle,
+}: ConversationViewProps) {
+  const [confirmArchive, setConfirmArchive] = useState(false);
   const conversation = useConversation(conversationId);
   const thread = useThread(conversationId);
   const older = useLoadOlder(conversationId);
@@ -112,43 +143,85 @@ export function ConversationView({ conversationId, viewerId }: ConversationViewP
   const summary = conversation.data;
   const participant = summary.participant;
 
+  const archiveButton = (
+    <Tip
+      label={
+        summary.is_archived
+          ? "Move this conversation back to your inbox"
+          : "Hide this conversation from your inbox. A new message brings it back."
+      }
+    >
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={archive.isPending}
+        onClick={() => (summary.is_archived ? archive.mutate(false) : setConfirmArchive(true))}
+      >
+        {summary.is_archived ? (
+          <ArchiveRestore aria-hidden className="size-4" />
+        ) : (
+          <Archive aria-hidden className="size-4" />
+        )}
+        <span>{summary.is_archived ? "Unarchive" : "Archive"}</span>
+      </Button>
+    </Tip>
+  );
+
   return (
-    <section aria-labelledby="conversation-heading" className="flex min-h-[60vh] flex-col">
-      <header className="flex items-center gap-3 border-b border-border p-3">
-        <Button asChild variant="ghost" size="icon" className="md:hidden">
-          <Link to={paths.messages} aria-label="Back to conversations">
-            <ArrowLeft aria-hidden className="size-4" />
-          </Link>
-        </Button>
-        <Avatar
-          name={participant.display_name}
-          imageUrl={participant.avatar_url ?? undefined}
-          presence={participant.presence}
-        />
-        <div className="min-w-0 flex-1">
-          <h2 id="conversation-heading" className="truncate text-base font-semibold">
-            {participant.display_name}
+    <section
+      aria-labelledby="conversation-heading"
+      data-variant={variant}
+      className={cn("flex flex-col", className ?? "min-h-[60vh]")}
+    >
+      {variant === "classic" ? (
+        <header className="flex items-center gap-2 border-b border-border bg-surface-raised px-2 py-1 bevel">
+          <Button asChild variant="ghost" size="icon" className="md:hidden">
+            <Link to={paths.messages} aria-label="Back to conversations">
+              <ArrowLeft aria-hidden className="size-4" />
+            </Link>
+          </Button>
+          <PresenceIndicator status={participant.presence} />
+          <h2 id="conversation-heading" className="min-w-0 flex-1 truncate text-sm font-bold">
+            {nickname ?? participant.display_name}
+            <span className="ml-2 text-xs font-normal text-fg-muted">
+              {PRESENCE_WORDS[participant.presence]}
+            </span>
           </h2>
-          <p className="flex flex-wrap items-center gap-2 text-xs text-fg-muted">
-            {participant.username ? <span>@{participant.username}</span> : null}
-            <PresenceIndicator status={participant.presence} showLabel />
-            <ChannelBadge channel="internet" />
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={archive.isPending}
-          onClick={() => archive.mutate(!summary.is_archived)}
-        >
-          {summary.is_archived ? (
-            <ArchiveRestore aria-hidden className="size-4" />
-          ) : (
-            <Archive aria-hidden className="size-4" />
-          )}
-          <span>{summary.is_archived ? "Unarchive" : "Archive"}</span>
-        </Button>
-      </header>
+          {archiveButton}
+        </header>
+      ) : (
+        <header className="flex items-center gap-3 border-b border-border p-3">
+          <Button asChild variant="ghost" size="icon" className="md:hidden">
+            <Link to={paths.messages} aria-label="Back to conversations">
+              <ArrowLeft aria-hidden className="size-4" />
+            </Link>
+          </Button>
+          <Avatar
+            name={participant.display_name}
+            imageUrl={participant.avatar_url ?? undefined}
+            presence={participant.presence}
+          />
+          <div className="min-w-0 flex-1">
+            <h2 id="conversation-heading" className="truncate text-base font-semibold">
+              {participant.display_name}
+            </h2>
+            <p className="flex flex-wrap items-center gap-2 text-xs text-fg-muted">
+              {participant.username ? <span>@{participant.username}</span> : null}
+              <PresenceIndicator status={participant.presence} showLabel />
+              <ChannelBadge channel="internet" />
+            </p>
+          </div>
+          {archiveButton}
+        </header>
+      )}
+      <ConfirmDialog
+        open={confirmArchive}
+        onOpenChange={setConfirmArchive}
+        title="Archive this conversation?"
+        description={`It leaves your inbox. Nothing is deleted, and a new message from ${participant.display_name} brings it back.`}
+        confirmLabel="Archive"
+        onConfirm={() => archive.mutate(true)}
+      />
 
       <ConnectionBanner />
       <p aria-live="polite" className="sr-only">
@@ -161,7 +234,10 @@ export function ConversationView({ conversationId, viewerId }: ConversationViewP
           const node = event.currentTarget;
           nearBottom.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80;
         }}
-        className="flex-1 space-y-2 overflow-y-auto p-3"
+        className={cn(
+          "min-h-0 flex-1 space-y-2 overflow-y-auto",
+          variant === "classic" ? "p-2" : "p-3",
+        )}
       >
         {thread.isPending ? <p role="status">Loading messages…</p> : null}
         {thread.isError && !data ? (
@@ -214,6 +290,9 @@ export function ConversationView({ conversationId, viewerId }: ConversationViewP
         conversationId={conversationId}
         onSend={send}
         disabledReason={summary.can_send ? undefined : (summary.cannot_send_reason ?? undefined)}
+        suggestion={suggestion}
+        onDraftChange={onDraftChange}
+        showAiToggle={showAiToggle}
       />
     </section>
   );

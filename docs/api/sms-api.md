@@ -130,7 +130,7 @@ Order of work: size limit (64 KB) -> per-IP rate limit -> signature check over t
 | `GET /capabilities`, `PUT /capabilities/{cc}` | Read current rules; publish a new immutable version. The database refuses `supported` without recorded verification, `supported` while a required sender is unregistered, and a Philippine row without a registration status |
 | `GET /monitoring` | 24-hour counts, delivery and failure rates, queue depth, unrouted and failed callbacks, rejected signatures, opt-outs, pause state, recent failures (masked, no text) |
 | `GET /inbound/unrouted` | Unmatched replies (masked, no text, retention date) |
-| `POST /simulate/inbound` | Simulation only, never in production: injects a signed reply through the real webhook path. `replay_id` replays an event to test duplicates |
+| `POST /simulate/inbound` | Simulation only, never in production: injects a signed reply through the real webhook path. `to_number` is optional: omitted, it is the one sender number that currently routes replies from `from_phone` (`422 no_active_route` or `route_not_unique` otherwise), because administrators only see masked sender numbers. `replay_id` replays an event to test duplicates |
 
 ---
 

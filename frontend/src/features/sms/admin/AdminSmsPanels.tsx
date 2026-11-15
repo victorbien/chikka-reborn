@@ -1,4 +1,4 @@
-﻿import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { FormAlert } from "@/components/common/FormAlert";
@@ -38,7 +38,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Loading({ label }: { label: string }) {
   return (
     <p role="status" className="text-sm text-fg-muted">
-      Loading {label}…
+      Loading {label}�
     </p>
   );
 }
@@ -328,14 +328,19 @@ export function SimulateReplySection() {
   return (
     <Section title="Simulate a reply">
       <p className="mb-3 text-sm text-fg-muted">
-        Sends a signed fake reply through the real webhook path. Simulation mode only. Use the
-        sender number shown on the conversation&apos;s route.
+        Sends a signed fake reply through the real webhook path. Simulation mode only. Leave the
+        sender number empty to use the one that currently routes replies from this phone.
       </p>
-      <form className="space-y-3" onSubmit={form.handleSubmit((values) => simulate.mutate(values))}>
+      <form
+        className="space-y-3"
+        onSubmit={form.handleSubmit((values) =>
+          simulate.mutate({ ...values, to_number: values.to_number || undefined }),
+        )}
+      >
         <FormField label="From (the phone replying)" error={errors.from_phone?.message}>
           <Input {...form.register("from_phone")} />
         </FormField>
-        <FormField label="To (our sender number)" error={errors.to_number?.message}>
+        <FormField label="To (our sender number, optional)" error={errors.to_number?.message}>
           <Input {...form.register("to_number")} />
         </FormField>
         <FormField label="Reply text" error={errors.body?.message}>
