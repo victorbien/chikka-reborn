@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -13,6 +13,8 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     css: false,
+    // Playwright specs (*.e2e.ts) run in a real browser through `npm run test:e2e`.
+    exclude: [...configDefaults.exclude, "e2e/**"],
     // Page-level tests drive several requests and renders each.
     testTimeout: 15_000,
     coverage: {

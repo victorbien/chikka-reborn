@@ -98,6 +98,8 @@ describe("sign in", () => {
     expect(window.localStorage.length).toBe(0);
     const login = api.callsTo("POST", "/api/v1/auth/login")[0];
     expect(login?.credentials).toBe("include");
+    // The profile request is issued after navigation settles; wait for it instead of racing it.
+    await waitFor(() => expect(api.callsTo("GET", "/api/v1/users/me").length).toBeGreaterThan(0));
     const me = api.callsTo("GET", "/api/v1/users/me")[0];
     expect(me?.headers.Authorization).toBe("Bearer access-1");
   });

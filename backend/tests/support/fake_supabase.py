@@ -377,6 +377,16 @@ class FakeSupabase:
                 )
             return Response(status_code=204)
 
+        @app.post("/__reset_rate_limits")
+        async def reset_rate_limits(request: Request) -> Response:
+            """Test-only: browser suites share one IP, so per-IP quotas (10 sign-ups an hour)
+            would starve later specs. Specs that test a limit reset first, then hit it."""
+            if request.headers.get("apikey") != fake.service_role_key:
+                return fake._error(403, "forbidden")
+            async with fake._engine.begin() as conn:
+                await conn.execute(text("delete from public.rate_limit_counters"))
+            return Response(status_code=204)
+
         # -- storage ---------------------------------------------------------------------
 
         @app.post("/storage/v1/object/sign/{bucket}/{path:path}")

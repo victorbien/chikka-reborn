@@ -216,6 +216,13 @@ copy .env.example .env
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
 .\.venv\Scripts\python.exe -m pytest
 ```
+### Browser end-to-end tests
+Playwright drives a real browser against a throwaway local stack (in-process PostgreSQL with every migration and RLS, a fake Supabase Auth, the API and the Vite dev server). SMS, AI and email are the mock providers, so nothing is sent anywhere and no real number or credential is used. Needs Chromium once: `npx playwright install chromium`.
+```powershell
+.\scripts\e2e-browser.ps1                  # whole suite (frees stale ports first)
+.\scripts\e2e-browser.ps1 sms.e2e.ts       # one spec
+```
+Results are written to `frontend/e2e-results/` (git-ignored). Details: [docs/testing-strategy.md](docs/testing-strategy.md#54-e2e-environment-as-built-adl-023) and the latest [test report](docs/quality/test-report.md).
 ### Database (no Docker needed for a quick check)
 
 Requires Node.js 20+. This applies all migrations, the development seed and the SQL tests to a throwaway in-process PostgreSQL. It sends nothing anywhere.

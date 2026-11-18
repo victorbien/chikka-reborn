@@ -318,9 +318,12 @@ describe("composing an SMS", () => {
     expect(screen.getByText(/not verified for live SMS/)).toBeInTheDocument();
     expect(screen.getByText(/not guaranteed/)).toBeInTheDocument();
 
-    const review = screen.getByRole("button", { name: "Review and send" });
-    await waitFor(() => expect(review).toBeEnabled());
-    await user.click(review);
+    // Re-query at click time: the button can be re-rendered while the form revalidates, and a
+    // click on a stale node is silently lost under load.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Review and send" })).toBeEnabled(),
+    );
+    await user.click(screen.getByRole("button", { name: "Review and send" }));
     expect(api.callsTo("POST", `${BASE}/messages`)).toHaveLength(0);
 
     const dialog = await screen.findByRole("dialog");

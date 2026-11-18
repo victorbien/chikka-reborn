@@ -92,6 +92,7 @@ Policy names combine the table (or an abbreviation), the operation and the audie
 | Policy | Definition (summary) |
 |---|---|
 | `messages_select_member` | Active member of the conversation AND `seq > cleared_before_seq` AND (not suppressed OR caller is sender) AND no `message_hides` row for the caller |
+| `message_attachments_select_member` | Caller is the uploader, OR `private.can_see_attachment_message(message_id)`: the message is visible to the caller under the same rules as `messages_select_member`. The helper is `security definer` because those rules read `suppressed_at`, which clients cannot select (migration `20261113000002`) |
 | `conversations_select_member` | `EXISTS` active `conversation_members` row for the caller |
 | `deliveries_select_party` | Caller is the recipient, or the sender of the parent message |
 | `contacts_insert_own_sms` | `owner_id = auth.uid()` AND `contact_type = 'sms'` (Chikka contacts exist only after an accepted request) |
@@ -105,6 +106,7 @@ The complete, current list for every table is in [schema-reference.md](schema-re
 
 - **`select *` on `messages` and some other tables fails for clients.** Column grants exclude sensitive columns, so a client must name the columns it needs. This is intentional.
 - **Blocks are invisible.** A blocked sender's message is stored with `suppressed_at`; the recipient's policy hides it, and the sender still sees it as normal. The suppression columns are not granted to anyone but the backend.
+- **A policy cannot read a column the caller is not granted.** Postgres checks column privileges inside policy sub-queries too. The original attachment policy read `messages.suppressed_at` directly, so every member query failed with "permission denied". Checks like that belong in a `security definer` helper in `private`, as `is_admin()` does.
 - **A member who leaves loses access** to the conversation and its messages immediately (`left_at`).
 - **`public_profiles` runs with the view owner's rights** so it can read profiles the caller cannot read directly. Its filter uses `auth.uid()`, and its column list is deliberately four fields. Adding a column needs a privacy review.
 - **Token lifetime.** A JWT stays valid until it expires. Suspension and deletion take effect in the database at once (policies check `profiles.status` for updates and the backend checks `is_active`), but Supabase tokens already issued are valid until expiry unless the backend also revokes the session.
@@ -112,7 +114,7 @@ The complete, current list for every table is in [schema-reference.md](schema-re
 
 ## 5. Testing
 
-`supabase/tests/database/04_rls_isolation.test.sql` covers every row in the matrix above: positive cases, cross-user denial, administrator limits, column refusals, server-only tables, anonymous refusal, function privileges, and structural checks (RLS enabled everywhere, no `anon` or `PUBLIC` grants, no policy for those roles, no client write grants on core tables). Details: [database-test-plan.md](database-test-plan.md).
+`supabase/tests/database/04_rls_isolation.test.sql` covers every row in the matrix above: positive cases, cross-user denial, administrator limits, column refusals, server-only tables, anonymous refusal, function privileges, and structural checks (RLS enabled everywhere, no `anon` or `PUBLIC` grants, no policy for those roles, no client write grants on core tables). `05_attachments_and_group_members_rls.test.sql` covers the two tables file 04 did not reach: `message_attachments` (uploader, member, outsider, hidden and suppressed messages, `storage_path` refusal, client write refusal, type and size checks) and `contact_group_members` (owner only). Details: [database-test-plan.md](database-test-plan.md).
 
 ## 6. Revision History
 
@@ -120,3 +122,4 @@ The complete, current list for every table is in [schema-reference.md](schema-re
 |---|---|---|---|
 | 1.0 | November 2026 | Kiro (Principal Architect) | Initial draft, 13 tables |
 | 2.0 | November 2026 | Kiro (Principal Architect) | 29 tables; column-level grants; narrower admin model; resolves OD-012 |
+| 2.1 | November 2026 | Kiro (QA) | Attachment policy fix (`20261113000002`); test file 05 |

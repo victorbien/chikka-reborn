@@ -45,6 +45,15 @@ try {
     $env:APP_SECRET_KEY = "e2e-only-app-secret-key-0123456789"
     $env:SMS_PROVIDER_MODE = "mock"
     $env:CORS_ORIGINS = "http://localhost:5173"
+    # backend/.env is read from the working directory. Blank anything that would otherwise reach
+    # a real project or provider from a developer's local file.
+    $env:SUPABASE_JWKS_URL = ""
+    $env:SMS_LIVE_CONFIRMED = "false"
+    $env:SMS_PUBLIC_BASE_URL = ""
+    $env:TWILIO_ACCOUNT_SID = ""
+    $env:TWILIO_AUTH_TOKEN = ""
+    $env:EMAIL_PROVIDER_MODE = "mock"
+    $env:AI_PROVIDER_MODE = "mock"
     $procs += Start-Process $py -ArgumentList "-m", "uvicorn", "app.main:app", "--port", "$apiPort" -WorkingDirectory "$root\backend" -PassThru -WindowStyle Hidden -RedirectStandardOutput "$env:TEMP\chikka-e2e-api.log" -RedirectStandardError "$env:TEMP\chikka-e2e-api.err"
     Wait-Http "http://127.0.0.1:$apiPort/api/v1/health"
 

@@ -46,6 +46,11 @@ Defines how Chikka Reborn database changes are written, ordered, applied and, wh
 | `20261110000014_lockdown_private_functions` | Explicit `EXECUTE` grants for the `private` schema | all |
 | `20261110000015_rate_limit_counters` | `rate_limit_counters` | foundation |
 | `20261111000001_avatars_bucket` | private Storage bucket `avatars` (WebP only, 512 KB); no client policies, backend writes with the service role; skipped where `storage` is absent | 20261110000002 |
+| `20261111000002_contacts_discovery` | Status message and email discoverability on profiles; backend-only exact email lookup | 20261110000002, 20261110000005 |
+| `20261111000003_chat_attachments` | `message_attachments`, attachment-only messages, private bucket `message-attachments` | 20261110000006, 20261110000007 |
+| `20261112000001_sms_gateway` | Country capability pricing and provider settings, redacted provider responses per attempt, simulation sender numbers | 20261110000003, 20261110000008, 20261110000013 |
+| `20261113000001_notifications_delivery` | Notification de-duplication and grouping, delivery outbox, `security` type | 20261110000010 |
+| `20261113000002_fix_attachment_select_policy` | Fixes `message_attachments_select_member`: members got "permission denied" because the policy read the ungranted `messages.suppressed_at`. Moves the check into `private.can_see_attachment_message()` (security definer) and honours `message_hides` | 20261111000003 |
 
 Development seed: `supabase/seed/01_dev_seed.sql` (5 accounts) and `supabase/seed/02_demo_data.sql` (20 accounts with simulated SMS, credits, AI usage, reports and audit rows for the admin dashboard). Wipe script: `supabase/tools/reset_dev_data.sql`. Test support and tests: `supabase/tests/`.
 

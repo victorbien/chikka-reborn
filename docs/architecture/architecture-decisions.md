@@ -764,6 +764,34 @@ Module G (notifications) and Module H (credits) were specified and had tables (m
 - Open items: a scheduled purge of expired notifications and old rate-limit rows; an admin UI for adjustments (the API exists); web push for closed browsers.
 
 ---
+## ADL-023 - Browser End-to-End Suite (Playwright)
+
+**Date:** November 2026  
+**Status:** Accepted  
+
+### Context
+The approved stack lists Playwright, but it was never installed. Journeys were checked only through the frontend service layer (`src/test/live`) and component tests, so nothing proved that the real SPA, the cookie-based session, the WebSocket and the API work together in a browser. ADL-020 and DEC-UI-MODES-001 both listed real-browser tests as open.
+
+### Decision
+- **Add `@playwright/test` 1.65.1 (exact version) as a frontend dev dependency** and use Chromium only. Specs live in `frontend/e2e/*.e2e.ts`; `vitest` excludes that folder; `npm run test:e2e` or `scripts/e2e-browser.ps1` runs them.
+- **Playwright starts a throwaway stack itself** (`frontend/playwright.config.ts`): PGlite with every migration and RLS, the fake Supabase Auth/Storage used by the backend flow tests, uvicorn, and the Vite dev server. SMS, AI and email run in mock mode; nothing leaves the machine.
+- **Backend settings are pinned explicitly** (JWKS URL, Twilio, live-SMS flag, FRONTEND_BASE_URL) because the backend reads `backend/.env` from its working directory. A developer's real project values must not reach a test stack.
+- **The SPA is served from `localhost`, not `127.0.0.1`.** The refresh cookie is `SameSite=Lax`; it only reaches the API from `localhost:5173` to `localhost:8010`.
+- **One test-only endpoint is added to the fake Supabase** (`POST /__reset_rate_limits`, service key required), next to the existing `__promote_admin`. All specs share one IP, so the per-IP sign-up quota (10 an hour) would otherwise fail unrelated specs. Specs that test limits reset first, then hit the limit.
+- **Setup goes through the API, assertions through the browser.** Specs create users and contacts by API and then drive only the behaviour they test in the UI.
+
+### Alternatives considered
+- Cypress or Selenium: not in the approved stack.
+- Mocking the API in the browser (`page.route`): fast, but the value of this layer is the real session, CORS, cookie and WebSocket behaviour.
+- Disabling rate limits in test mode: would hide a real control. Resetting counters keeps the limit code on the tested path.
+- Real Supabase and real providers: not allowed in tests (testing rules); also slow and non-deterministic.
+
+### Consequences
+- The suite is single-worker and takes several minutes; it is for pull requests to `main` and release checks, not every save.
+- It uses the Vite dev server, so it does not test the production bundle. A build-and-preview run is a later hardening step.
+- An accessibility scan (axe) and mobile viewports are not covered yet.
+
+---
 ## Decisions Pending (Open Decisions from PRD)
 
 | OD ID | Decision | Status | Blocks |

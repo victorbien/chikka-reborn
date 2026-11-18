@@ -79,6 +79,31 @@ def test_env_example_values_load(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.sms_provider_mode == "mock"
 
 
+def test_env_example_contains_no_real_secrets() -> None:
+    # Regression: a real database password, JWT secret and service-role key were pasted into the
+    # committed example file. It may only hold blanks, placeholders and non-sensitive defaults.
+    import re
+    from pathlib import Path
+
+    sensitive_name = re.compile(
+        r"(SECRET|_KEY|PASSWORD|AUTH_TOKEN|DATABASE_URL|JWKS_URL|SUPABASE_URL|_SID)$"
+    )
+    jwt_shape = re.compile(r"eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.")
+    url_with_password = re.compile(r"://[^/\s:@]+:[^/\s@]+@")
+    example = Path(__file__).parents[2] / ".env.example"
+    problems: list[str] = []
+    for number, line in enumerate(example.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip() or line.lstrip().startswith("#") or "=" not in line:
+            continue
+        name, _, value = line.partition("=")
+        value = value.strip()
+        if jwt_shape.search(value) or url_with_password.search(value):
+            problems.append(f"line {number}: {name} looks like a real credential")
+        elif sensitive_name.search(name) and value and not value.lower().startswith("change-me"):
+            problems.append(f"line {number}: {name} must be blank or a placeholder")
+    assert problems == [], problems
+
+
 def test_secure_cookies_default_by_environment() -> None:
     assert make().secure_cookies is False
     assert make(app_env="production", app_secret_key="k" * 32).secure_cookies is True

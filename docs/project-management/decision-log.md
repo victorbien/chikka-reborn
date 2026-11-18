@@ -224,6 +224,13 @@ These decisions are blocking or will block phase starts. Each has a `Due By` dat
 **Decision:** Both modes share every query, hook and service; they differ by CSS tokens and by the shell and `/messages` layout (`routes/modes/`). The mode is saved to `profiles.ui_mode` (no schema change) and cached in `localStorage`; the profile wins on sign-in, and a failed save reverts the mode. The first use of the already-pinned `@radix-ui/react-tooltip` and `@radix-ui/react-tabs` adds no dependency. The Modern side column uses `matchMedia` so only one AI assistant is mounted at a time.  
 **Open items:** Playwright is not set up, so desktop and mobile layouts are tested in Vitest by simulating viewport media queries; real-browser E2E and an axe scan still need to be added. `profiles.display_options` is unused.
 
+### DEC-QA-E2E-001 - Playwright browser suite and test isolation
+**Date:** November 2026  
+**Status:** Decided  
+**Decision:** Add `@playwright/test` 1.65.1 (pinned, dev dependency, Chromium only) for browser journeys. Playwright starts PGlite, the fake Supabase, uvicorn and Vite itself, in simulation mode, with backend settings pinned so `backend/.env` cannot leak real project values. A test-only `POST /__reset_rate_limits` on the fake Supabase keeps the shared-IP sign-up quota from failing unrelated specs. Full reasoning: ADL-023.  
+**Open items:** the axe accessibility scan and mobile viewports (named in DEC-UI-MODES-001) are still not covered. The suite runs against the Vite dev server, not the production bundle.
+
+---
 ---
 
 ## Decision Log Management
