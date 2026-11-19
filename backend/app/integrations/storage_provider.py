@@ -6,6 +6,8 @@ from urllib.parse import quote
 
 import httpx
 
+from app.core.storage_paths import is_safe_object_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -50,6 +52,9 @@ class SupabaseStorageProvider:
         await self._client.aclose()
 
     def _object_url(self, path: str) -> str:
+        # The HTTP client collapses "..", so an unchecked path could leave this bucket.
+        if not is_safe_object_path(path):
+            raise StorageError("Invalid object path")
         return f"{self._base}/object/{self._bucket}/{quote(path)}"
 
     async def _send(
@@ -83,6 +88,8 @@ class SupabaseStorageProvider:
         await self._send("DELETE", self._object_url(path))
 
     async def signed_url(self, path: str, expires_in: int) -> str:
+        if not is_safe_object_path(path):
+            raise StorageError("Invalid object path")
         response = await self._send(
             "POST",
             f"{self._base}/object/sign/{self._bucket}/{quote(path)}",

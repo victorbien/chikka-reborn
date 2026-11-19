@@ -34,6 +34,7 @@ from app.core.exceptions import (
     UnprocessableError,
 )
 from app.core.security import AuthenticatedUser
+from app.core.storage_paths import owned_avatar_path
 from app.database.session import Database
 from app.integrations.storage_provider import StorageError, StorageProvider
 from app.modules.chat.attachments import (
@@ -173,7 +174,10 @@ class ChatService:
         relationships = await directory.relationships(viewer, others)
         avatars = await asyncio.gather(
             *(
-                self._sign(self._avatars, profiles[o].avatar_path if o in profiles else None)
+                self._sign(
+                    self._avatars,
+                    owned_avatar_path(o, profiles[o].avatar_path) if o in profiles else None,
+                )
                 for o in others
             )
         )

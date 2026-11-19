@@ -51,6 +51,7 @@ Defines how Chikka Reborn database changes are written, ordered, applied and, wh
 | `20261112000001_sms_gateway` | Country capability pricing and provider settings, redacted provider responses per attempt, simulation sender numbers | 20261110000003, 20261110000008, 20261110000013 |
 | `20261113000001_notifications_delivery` | Notification de-duplication and grouping, delivery outbox, `security` type | 20261110000010 |
 | `20261113000002_fix_attachment_select_policy` | Fixes `message_attachments_select_member`: members got "permission denied" because the policy read the ungranted `messages.suppressed_at`. Moves the check into `private.can_see_attachment_message()` (security definer) and honours `message_hides` | 20261111000003 |
+| `20261120000001_profiles_avatar_path_guard` | Security audit SEC-001. Revokes client `UPDATE (avatar_path)` and adds `ck_profiles_avatar_path` (`NOT VALID`: new and changed rows only; operators validate after cleaning legacy rows) | 20261110000002 |
 
 Development seed: `supabase/seed/01_dev_seed.sql` (5 accounts) and `supabase/seed/02_demo_data.sql` (20 accounts with simulated SMS, credits, AI usage, reports and audit rows for the admin dashboard). Wipe script: `supabase/tools/reset_dev_data.sql`. Test support and tests: `supabase/tests/`.
 

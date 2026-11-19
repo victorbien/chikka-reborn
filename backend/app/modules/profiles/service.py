@@ -9,6 +9,7 @@ import secrets
 import uuid
 from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID
 
 from starlette.concurrency import run_in_threadpool
 
@@ -21,6 +22,7 @@ from app.core.exceptions import (
 )
 from app.core.privacy import mask_phone
 from app.core.security import AuthenticatedUser
+from app.core.storage_paths import avatar_path_for, owned_avatar_path
 from app.database.session import Database
 from app.integrations.storage_provider import StorageError, StorageProvider
 from app.modules.audit.service import AuditLogger
@@ -78,11 +80,12 @@ class ProfileService:
             raise NotFoundError("Profile not found.")
         return profile
 
-    async def _avatar_url(self, path: str | None) -> str | None:
-        if not path:
+    async def _avatar_url(self, owner_id: UUID, path: str | None) -> str | None:
+        safe_path = owned_avatar_path(owner_id, path)
+        if safe_path is None:
             return None
         try:
-            return await self._storage.signed_url(path, AVATAR_URL_TTL_SECONDS)
+            return await self._storage.signed_url(safe_path, AVATAR_URL_TTL_SECONDS)
         except StorageError:
             # The UI falls back to initials; the rest of the profile still loads.
             return None
@@ -105,7 +108,7 @@ class ProfileService:
             display_name=profile.display_name,
             email=user.email,
             email_verified=profile.status != "pending_verification",
-            avatar_url=await self._avatar_url(profile.avatar_path),
+            avatar_url=await self._avatar_url(profile.id, profile.avatar_path),
             bio=profile.bio,
             status_message=profile.status_message,
             country_code=profile.country_code,
@@ -232,7 +235,7 @@ class ProfileService:
                 details={"problems": [{"field": "avatar", "reason": exc.reason}]},
             ) from exc
 
-        path = f"{user.id}/{uuid.uuid4().hex}.webp"
+        path = avatar_path_for(user.id, uuid.uuid4().hex)
         try:
             await self._storage.upload(path, encoded, "image/webp")
         except StorageError as exc:
@@ -246,8 +249,8 @@ class ProfileService:
             profile = await self._own_profile(repository, user)
             previous = profile.avatar_path
             await repository.apply(profile, {"avatar_path": path})
-        await self._delete_quietly(previous)
-        return await self._avatar_url(path)
+        await self._delete_quietly(user.id, previous)
+        return await self._avatar_url(user.id, path)
 
     async def remove_avatar(self, user: AuthenticatedUser) -> None:
         async with self._db.transaction() as session:
@@ -256,13 +259,14 @@ class ProfileService:
             previous = profile.avatar_path
             if previous is not None:
                 await repository.apply(profile, {"avatar_path": None})
-        await self._delete_quietly(previous)
+        await self._delete_quietly(user.id, previous)
 
-    async def _delete_quietly(self, path: str | None) -> None:
-        if not path:
+    async def _delete_quietly(self, owner_id: UUID, path: str | None) -> None:
+        safe_path = owned_avatar_path(owner_id, path)
+        if safe_path is None:
             return
         try:
-            await self._storage.delete(path)
+            await self._storage.delete(safe_path)
         except StorageError:
             logger.warning("old avatar not deleted; it is unreferenced and private")
 

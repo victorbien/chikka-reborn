@@ -50,7 +50,7 @@ S = select, I = insert, U = update, D = delete. "Own" means the row belongs to `
 
 | Table | Signed-in user | Administrator (extra) |
 |---|---|---|
-| `profiles` | S own. U own, only: display name, bio, avatar path, country, language, time zone, ui mode, theme, display options, visibility, presence settings, receipts, typing, discoverability. **Not** username, role, status, AI flag, deletion fields | S all rows. No write |
+| `profiles` | S own. U own, only: display name, bio, country, language, time zone, ui mode, theme, display options, visibility, presence settings, receipts, typing, discoverability. **Not** username, role, status, AI flag, deletion fields, or avatar path (backend-only since `20261120000001`; the value must be `<id>/<32 hex>.webp`) | S all rows. No write |
 | `public_profiles` (view) | S id, username, display name, avatar, country of profiles that are active, named, and visible to the caller (self, `everyone`, or `contacts` when the owner has the caller as a contact). Hidden if the owner blocked the caller | – |
 | `phone_numbers` | S own, excluding all OTP columns | – |
 | `user_consents` | S own | – |
@@ -123,3 +123,4 @@ The complete, current list for every table is in [schema-reference.md](schema-re
 | 1.0 | November 2026 | Kiro (Principal Architect) | Initial draft, 13 tables |
 | 2.0 | November 2026 | Kiro (Principal Architect) | 29 tables; column-level grants; narrower admin model; resolves OD-012 |
 | 2.1 | November 2026 | Kiro (QA) | Attachment policy fix (`20261113000002`); test file 05 |
+| 2.2 | November 2026 | Kiro (Security) | `profiles.avatar_path` made backend-only and constrained (`20261120000001`, SEC-001) |

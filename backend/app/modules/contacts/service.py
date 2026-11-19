@@ -28,6 +28,7 @@ from app.core.exceptions import (
 from app.core.privacy import mask_phone
 from app.core.sanitize import clean_text
 from app.core.security import AuthenticatedUser
+from app.core.storage_paths import owned_avatar_path
 from app.database.session import Database
 from app.integrations.storage_provider import StorageError, StorageProvider
 from app.modules.audit.service import AuditLogger
@@ -117,17 +118,18 @@ class ContactService:
 
     # -- shared helpers ----------------------------------------------------------------------
 
-    async def _sign(self, path: str | None) -> str | None:
-        if not path:
+    async def _sign(self, owner_id: UUID, path: str | None) -> str | None:
+        safe_path = owned_avatar_path(owner_id, path)
+        if safe_path is None:
             return None
         try:
-            return await self._storage.signed_url(path, AVATAR_URL_TTL_SECONDS)
+            return await self._storage.signed_url(safe_path, AVATAR_URL_TTL_SECONDS)
         except StorageError:
             return None  # The UI falls back to initials.
 
     async def _avatar_urls(self, profiles: Iterable[Profile]) -> dict[UUID, str | None]:
         unique = {profile.id: profile.avatar_path for profile in profiles}
-        urls = await asyncio.gather(*(self._sign(path) for path in unique.values()))
+        urls = await asyncio.gather(*(self._sign(owner, path) for owner, path in unique.items()))
         return dict(zip(unique.keys(), urls, strict=True))
 
     def _presence_of(self, profile: Profile) -> tuple[ContactPresence, datetime | None]:

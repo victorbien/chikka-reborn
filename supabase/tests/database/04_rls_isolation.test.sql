@@ -152,6 +152,7 @@ begin
     perform tests.assert_error($q$update public.profiles set status = 'active' where id = tests.uid(1)$q$, '42501', 'a user cannot change their own status');
     perform tests.assert_error($q$update public.profiles set username = 'newname' where id = tests.uid(1)$q$, '42501', 'username changes go through the backend');
     perform tests.assert_error($q$update public.profiles set ai_enabled = true where id = tests.uid(1)$q$, '42501', 'AI enablement needs recorded consent via the backend');
+    perform tests.assert_error($q$update public.profiles set avatar_path = '../message-attachments/x/y.pdf' where id = tests.uid(1)$q$, '42501', 'avatar paths are written by the backend only (SEC-001)');
     perform tests.assert_error($q$insert into public.profiles (id) values (gen_random_uuid())$q$, '42501', 'clients cannot create profiles');
     perform tests.assert_error($q$delete from public.profiles where id = tests.uid(1)$q$, '42501', 'clients cannot delete profiles');
     perform tests.reset_role();
