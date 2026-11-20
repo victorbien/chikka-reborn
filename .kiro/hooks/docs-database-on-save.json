@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Docs: database schema changes (save)",
+      "trigger": "PostFileSave",
+      "description": "Lists database documents affected by a migration, undocumented tables, RLS changes and the missing migration-list entry.",
+      "matcher": "supabase[\\\\/]migrations[\\\\/].*\\.sql$",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/hooks/run.ps1 docs",
+        "timeout": 60
+      }
+    }
+  ]
+}

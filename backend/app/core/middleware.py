@@ -6,7 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
+from starlette.types import ASGIApp
 
+from app.core.body_limit import BodySizeLimitMiddleware
 from app.core.config import Settings
 from app.core.request_context import new_request_id, set_request_id
 
@@ -18,6 +20,10 @@ REQUEST_ID_HEADER = "X-Request-ID"
 class RequestContextMiddleware(BaseHTTPMiddleware):
     """Assigns a request ID, logs one access line and adds baseline security headers."""
 
+    def __init__(self, app: ASGIApp, *, hsts: bool = False) -> None:
+        super().__init__(app)
+        self._hsts = hsts
+
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         request_id = new_request_id(request.headers.get(REQUEST_ID_HEADER))
         set_request_id(request_id)
@@ -28,6 +34,11 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         response.headers[REQUEST_ID_HEADER] = request_id
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        if self._hsts:
+            response.headers.setdefault(
+                "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+            )
         logger.info(
             "request completed",
             extra={
@@ -42,7 +53,9 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
 
 
 def register_middleware(app: FastAPI, settings: Settings) -> None:
-    app.add_middleware(RequestContextMiddleware)
+    # HSTS only where HTTPS is guaranteed; sending it over local http is meaningless.
+    app.add_middleware(BodySizeLimitMiddleware)
+    app.add_middleware(RequestContextMiddleware, hsts=settings.secure_cookies)
     # Added last so it is outermost and answers preflight requests first.
     app.add_middleware(
         CORSMiddleware,

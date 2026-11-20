@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Docs: API contract changes",
+      "trigger": "PostFileSave",
+      "description": "Lists the API documents affected by a router or schema change and any route missing from docs/api.",
+      "matcher": "backend[\\\\/]app[\\\\/]modules[\\\\/][^\\\\/]+[\\\\/][a-z_]*(router|schemas)\\.py$",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/hooks/run.ps1 docs",
+        "timeout": 60
+      }
+    }
+  ]
+}

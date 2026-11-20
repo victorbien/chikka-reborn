@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Docs: requirement changes",
+      "trigger": "PostFileSave",
+      "description": "Lists acceptance criteria, test catalogue and traceability documents affected, and requirement IDs in the diff they do not mention.",
+      "matcher": "docs[\\\\/](prd|frs|nfrs)\\.md$|docs[\\\\/]product[\\\\/](frs[\\\\/].*|functional-requirements|non-functional-requirements)\\.md$",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/hooks/run.ps1 docs",
+        "timeout": 60
+      }
+    }
+  ]
+}

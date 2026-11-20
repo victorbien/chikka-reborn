@@ -1,0 +1,8 @@
+{
+  "check": "security",
+  "note": "Findings accepted as existing. Regenerate with --update-baseline after review.",
+  "accepted": [
+    "authorisation-not-checked|backend/app/modules/sms/router.py|GET /api/v1/sms/capability",
+    "authorisation-not-checked|backend/app/modules/sms/router.py|GET /api/v1/sms/countries"
+  ]
+}

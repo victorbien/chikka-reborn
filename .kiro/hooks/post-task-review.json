@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Review: full check after a spec task completes",
+      "trigger": "PostTaskExec",
+      "description": "After each spec task, runs all checks on the changed files and reports violations.",
+      "action": {
+        "type": "agent",
+        "prompt": "A spec task was just completed. Run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/hooks/run.ps1 all --changed --print` and summarise only real findings for files changed in this task: quality (format, lint, types), missing tests, documentation impact, security and architecture. For each documentation reminder, name the document that needs updating (project rule: update docs in the same change). Do not fix anything outside the task's files and do not deploy, apply migrations, send SMS or change credentials. If everything is clean, say so in one line."
+      }
+    }
+  ]
+}

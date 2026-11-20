@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { hostedEnvProblem } from "@/lib/env-rules";
 
 /**
  * Public, build-time configuration. Only VITE_-prefixed values reach the browser,
@@ -19,7 +20,15 @@ function withoutEmptyValues(source: Record<string, unknown>): Record<string, unk
 }
 
 export function parseEnv(source: Record<string, unknown>): AppEnv {
-  const result = envSchema.safeParse(withoutEmptyValues(source));
+  const cleaned = withoutEmptyValues(source);
+  const hostedProblem = hostedEnvProblem({
+    VITE_APP_ENV: typeof cleaned.VITE_APP_ENV === "string" ? cleaned.VITE_APP_ENV : undefined,
+    VITE_API_BASE_URL:
+      typeof cleaned.VITE_API_BASE_URL === "string" ? cleaned.VITE_API_BASE_URL : undefined,
+  });
+  if (hostedProblem)
+    throw new Error(`Invalid frontend environment configuration: ${hostedProblem}`);
+  const result = envSchema.safeParse(cleaned);
   if (!result.success) {
     const problems = result.error.issues
       .map((issue) => `${issue.path.join(".")}: ${issue.message}`)

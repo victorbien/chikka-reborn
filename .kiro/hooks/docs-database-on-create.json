@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Docs: database schema changes (new migration)",
+      "trigger": "PostFileCreate",
+      "description": "Same check as the save hook, for a migration file the moment it is created.",
+      "matcher": "supabase[\\\\/]migrations[\\\\/].*\\.sql$",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/hooks/run.ps1 docs",
+        "timeout": 60
+      }
+    }
+  ]
+}

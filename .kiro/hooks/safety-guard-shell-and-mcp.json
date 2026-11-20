@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Safety: ask before destructive, deploy, SMS, credential or financial actions",
+      "trigger": "PreToolUse",
+      "description": "Asks for human approval before shell commands or MCP calls that look destructive, deploy, send real SMS, change production credentials, move money or write to GitHub/AWS.",
+      "matcher": "execute_pwsh|control_pwsh_process|tool_call",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/hooks/run.ps1 guard-shell",
+        "timeout": 20
+      }
+    }
+  ]
+}

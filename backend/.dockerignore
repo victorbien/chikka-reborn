@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.json
+junit-backend.xml
+pytest-final.log
+tests/
+.env
+.env.*
+!.env.example
+requirements-dev.txt
+README.md

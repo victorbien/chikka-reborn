@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Tests: review newly created service, router or feature",
+      "trigger": "PostFileCreate",
+      "description": "Asks Kiro to recommend (and, with confirmation, generate) tests for new code. Does not write tests on its own.",
+      "matcher": "backend[\\\\/]app[\\\\/]modules[\\\\/][^\\\\/]+[\\\\/][^\\\\/]*(service|router)[^\\\\/]*\\.py$|backend[\\\\/]app[\\\\/]services[\\\\/][^\\\\/]+\\.py$|frontend[\\\\/]src[\\\\/]features[\\\\/].*\\.tsx$",
+      "action": {
+        "type": "agent",
+        "prompt": "A new backend service, API router or frontend feature file was just created. Run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/hooks/run.ps1 tests --changed --print` and read the result. For every 'service-no-tests', 'endpoint-no-tests', 'endpoint-no-response-schema', 'endpoint-untyped-input' or 'feature-no-tests' finding about a file created in this session, give a short test plan that follows .kiro/steering/testing.md (unit tests for business rules, flow tests for endpoints, must-have cases such as unauthorised access denied, duplicate idempotency key, no credit charge for simulation, accepted is not shown as delivered). Use fakes (MockSmsProvider, fake AiProvider), never real providers or real phone numbers. Do NOT write the tests yet: ask the user whether to generate them. If there are no such findings, say nothing."
+      }
+    }
+  ]
+}

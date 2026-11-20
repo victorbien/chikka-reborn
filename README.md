@@ -88,6 +88,10 @@ Chikka was a pioneering Filipino messaging platform that bridged the gap between
 - Render / Railway / Fly.io (FastAPI backend)
 - Supabase (database and auth)
 
+Automation: Kiro hooks and quality checks are described in [docs/quality/kiro-hooks.md](docs/quality/kiro-hooks.md).
+
+Guides: [deployment guide](docs/deployment/deployment-guide.md), [checklist](docs/deployment/deployment-checklist.md), [rollback](docs/deployment/rollback-procedure.md), [troubleshooting](docs/deployment/troubleshooting.md), [Supabase](docs/deployment/supabase-setup.md), [Twilio](docs/deployment/twilio-configuration.md), [Bedrock](docs/deployment/bedrock-setup.md). Production templates: `backend/production.env.example`, `frontend/production.env.example`.
+
 ---
 
 ## Project Structure

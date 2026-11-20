@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Report: open check findings at each prompt",
+      "trigger": "UserPromptSubmit",
+      "description": "Re-checks files with open findings and prints the ones still open, so Kiro sees violations from the previous saves. Prints nothing when clean.",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/hooks/run.ps1 summary",
+        "timeout": 30
+      }
+    }
+  ]
+}

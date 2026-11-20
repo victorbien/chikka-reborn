@@ -249,3 +249,13 @@ This prevents the application from running in a silently broken state.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | November 2026 | Kiro (Principal Architect) | Initial draft |
+
+---
+
+## 10. Hosted Deployment Additions (November 2026)
+
+- Templates for real environments: `backend/production.env.example` and `frontend/production.env.example`. They are documentation; real values live in the hosting secret stores.
+- `python -m app.preflight` runs before the server in the container and blocks an unsafe hosted configuration (see [deployment-guide.md](deployment-guide.md)). It requires `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, https non-local `CORS_ORIGINS` and `FRONTEND_BASE_URL` (whose origin must be listed in `CORS_ORIGINS`), no `COOKIE_SECURE=false`, and no `LOG_LEVEL=DEBUG`.
+- Server variables read by uvicorn, not by the application settings: `PORT` (default 8000 in the image) and `FORWARDED_ALLOW_IPS` (proxy addresses trusted for `X-Forwarded-For`).
+- Frontend: a build with `VITE_APP_ENV` of `staging` or `production` fails unless `VITE_API_BASE_URL` is an https, non-local URL. No Supabase variable is needed by the frontend.
+- Request body limits are fixed in code (`app/core/body_limit.py`), not configurable: 1 MB default, 64 KB webhooks, 3 MB avatar, 11 MB attachments.

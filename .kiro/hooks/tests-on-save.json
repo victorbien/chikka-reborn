@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Tests: service, endpoint and feature test gaps on save",
+      "trigger": "PostFileSave",
+      "description": "Checks that services have tests, endpoints have tests and typed request/response schemas, and frontend features have component tests.",
+      "matcher": "backend[\\\\/]app[\\\\/]modules[\\\\/][^\\\\/]+[\\\\/][^\\\\/]*(service|router)[^\\\\/]*\\.py$|backend[\\\\/]app[\\\\/]services[\\\\/][^\\\\/]+\\.py$|frontend[\\\\/]src[\\\\/]features[\\\\/].*\\.tsx?$",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/hooks/run.ps1 tests",
+        "timeout": 60
+      }
+    }
+  ]
+}
