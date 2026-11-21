@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { MainNav, type NavItem } from "@/components/navigation/MainNav";
+import { Logo } from "@/components/shared/Logo";
 import { paths } from "@/lib/paths";
 import { useDisplayMode } from "@/lib/display-mode";
 import { cn } from "@/lib/utils";
@@ -30,9 +31,14 @@ export function AppLayout({ navItems, headerActions }: AppLayoutProps) {
             classic ? "max-w-4xl px-2 py-1" : wide ? "max-w-[90rem] p-2" : "max-w-5xl p-2",
           )}
         >
-          <span className={cn("font-bold", classic ? "text-sm" : "text-lg")}>
-            {classic ? "Chikka Reborn · Classic" : "Chikka Reborn"}
-          </span>
+          {classic ? (
+            <span className="flex items-center gap-2 text-sm font-bold">
+              <Logo size="sm" decorative />
+              Chikka Reborn · Classic
+            </span>
+          ) : (
+            <Logo size="md" />
+          )}
           <MainNav items={navItems} compact={classic} />
           {headerActions ? <div className="flex items-center gap-2">{headerActions}</div> : null}
         </div>

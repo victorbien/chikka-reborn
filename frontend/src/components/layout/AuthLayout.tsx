@@ -1,11 +1,12 @@
 import { Outlet } from "react-router-dom";
+import { Logo } from "@/components/shared/Logo";
 
 /** Centred, navigation-free layout for sign-in, sign-up and recovery screens. */
 export function AuthLayout() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
       <div className="text-center">
-        <p className="text-2xl font-bold">Chikka Reborn</p>
+        <Logo size="lg" className="mx-auto" />
         <p className="text-sm text-fg-muted">The Messenger That Refused to Die.</p>
       </div>
       <main

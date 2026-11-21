@@ -9,6 +9,7 @@ import { ConversationItem } from "@/components/shared/ConversationItem";
 import { CreditBalance } from "@/components/shared/CreditBalance";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
+import { Logo } from "@/components/shared/Logo";
 import { MessageBubble } from "@/components/shared/MessageBubble";
 import { MessageComposer } from "@/components/shared/MessageComposer";
 import { ModeSwitcher } from "@/components/shared/ModeSwitcher";
@@ -41,7 +42,9 @@ export function StyleGuide() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
       <header>
-        <h1 className="text-2xl font-bold">Chikka Reborn</h1>
+        <h1>
+          <Logo size="lg" />
+        </h1>
         <p className="text-sm text-fg-muted">The Messenger That Refused to Die.</p>
         <p className="text-xs text-fg-muted">
           Independent, Chikka-inspired project. Not affiliated with the original service.

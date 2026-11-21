@@ -30,7 +30,7 @@ class AiRequest(BaseModel):
 
 
 class AiCompletion(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, protected_namespaces=())
 
     text: str
     model_id: str
