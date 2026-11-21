@@ -7,6 +7,7 @@ from app.api.deps import (
     AccessTokenDep,
     AuthServiceDep,
     CurrentUserDep,
+    ProvidersDep,
     RequestMetaDep,
     SettingsDep,
 )
@@ -91,9 +92,16 @@ async def logout(
     service: AuthServiceDep,
     settings: SettingsDep,
     meta: RequestMetaDep,
+    providers: ProvidersDep,
     body: LogoutRequest | None = None,
 ) -> Response:
-    await service.logout(user, token, (body or LogoutRequest()).scope, meta)
+    scope = (body or LogoutRequest()).scope
+    await service.logout(user, token, scope, meta)
+    # Live sockets end with the session, not when their access token happens to expire.
+    if scope == "global":
+        providers.realtime.disconnect_user(user.id)
+    else:
+        providers.realtime.disconnect_session(user.session_id)
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
     clear_refresh_cookie(response, settings)
     return response

@@ -9,3 +9,6 @@ htmlcov/
 .env
 .env.*
 !.env.example
+# Test result files (regenerated; see docs/quality/test-report.md)
+coverage.json
+junit-backend.xml

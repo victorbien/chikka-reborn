@@ -363,6 +363,30 @@ class FakeSupabase:
                 ]
             )
 
+        @app.post("/__promote_admin")
+        async def promote_admin(email: str) -> Response:
+            """Test-only: make an existing user an administrator (needs the service key,
+            like every other fake endpoint). Mirrors the SQL the flow tests run."""
+            user = fake.users.get(email.lower())
+            if user is None:
+                return fake._error(404, "user_not_found")
+            async with fake._engine.begin() as conn:
+                await conn.execute(
+                    text("update public.profiles set role = 'admin' where id = cast(:id as uuid)"),
+                    {"id": user.id},
+                )
+            return Response(status_code=204)
+
+        @app.post("/__reset_rate_limits")
+        async def reset_rate_limits(request: Request) -> Response:
+            """Test-only: browser suites share one IP, so per-IP quotas (10 sign-ups an hour)
+            would starve later specs. Specs that test a limit reset first, then hit it."""
+            if request.headers.get("apikey") != fake.service_role_key:
+                return fake._error(403, "forbidden")
+            async with fake._engine.begin() as conn:
+                await conn.execute(text("delete from public.rate_limit_counters"))
+            return Response(status_code=204)
+
         # -- storage ---------------------------------------------------------------------
 
         @app.post("/storage/v1/object/sign/{bucket}/{path:path}")

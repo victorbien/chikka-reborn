@@ -235,7 +235,7 @@ frontend/
 
 | Tool | Purpose |
 |---|---|
-| `playwright` | Browser automation (Chromium, Firefox, WebKit) |
+| `@playwright/test` 1.65.1 | Browser automation (Chromium is installed and used; Firefox and WebKit are not set up) |
 | Playwright fixtures | Shared setup: create test users, seed data |
 
 ### 5.2 Scope
@@ -279,12 +279,29 @@ E2E tests cover **critical user journeys** only. They are not exhaustive — tha
 2. User attempts to send SMS with insufficient credits — send blocked.
 3. (Phase 4) User completes top-up — balance updated.
 
-### 5.4 E2E Environment
+### 5.4 E2E Environment (as built, ADL-023)
 
-- Playwright tests run against a **staging environment** with a seeded test database.
-- SMS is always in **simulation mode** in E2E tests.
-- AI calls are intercepted using Playwright route mocking.
-- Test users are created via a Playwright fixture that calls the test seed API.
+- **Where:** `frontend/e2e/*.e2e.ts`, configured by `frontend/playwright.config.ts`. Chromium only, one worker, `@playwright/test` pinned to 1.65.1.
+- **Stack:** Playwright starts a throwaway local stack for the run: PGlite with every migration and RLS, the fake Supabase Auth/Storage (`backend/tests/support/fake_supabase.py`), uvicorn and the Vite dev server. There is no staging dependency and nothing leaves the machine.
+- **Modes:** SMS, AI and email are always the mock providers. The backend settings are pinned in the config so a developer's `backend/.env` cannot point the run at a real project or provider.
+- **Users:** specs create users, contacts and verified phones through the API (`e2e/support/api.ts`, `people.ts`) and then drive only the behaviour under test through the UI. A second person is a second browser context.
+- **Quotas:** every spec starts by resetting the per-IP rate-limit counters (`POST /__reset_rate_limits`, test-only). Specs that test a limit hit it deliberately.
+- **Host name:** the SPA must be opened on `localhost`. The refresh cookie is `SameSite=Lax` and does not travel from `127.0.0.1`.
+- **Run:** `.\scripts\e2e-browser.ps1` (frees stale ports, runs everything) or `npm run test:e2e` in `frontend`. Results: `frontend/e2e-results/` (JSON, HTML, traces and screenshots of failures; git-ignored).
+- **Not covered:** accessibility scan (axe), mobile viewports, Firefox and WebKit, and the production bundle (the run uses the Vite dev server).
+
+| Spec | Journeys |
+|---|---|
+| `auth.e2e.ts` | Registration, email confirmation, onboarding, sign-in, sign-out, wrong credentials, session restore |
+| `profile.e2e.ts` | Edit profile, validation, photo upload and refusal, mobile number verification |
+| `contacts.e2e.ts` | Find, request, accept, reject, remove |
+| `chat.e2e.ts` | Real-time Chikka-to-Chikka chat, markup shown as text, non-contacts and outsiders refused |
+| `sms.e2e.ts` | Simulated send, confirmation, delivery tracking, reply, duplicate reply, failure and refund, consent and verified-number blocks |
+| `ai.e2e.ts` | Opt-in, translation, smart replies, drafts never sent without Send, switching off |
+| `notifications.e2e.ts` | Unread bell, list, mark read, dismiss, empty state |
+| `modes.e2e.ts` | Classic and Modern switch, persisted to the profile, settings radios |
+| `admin.e2e.ts` | Dashboard, users, audit log, SMS settings, ordinary user refused |
+| `security.e2e.ts` | Unauthorised and forged tokens, cross-user access, role escalation, webhook forgery, rate limits, data exposure, invalid input, upload limits, session handling |
 
 ---
 

@@ -43,6 +43,12 @@ export function ChannelBadge({ channel, smsMode, className }: ChannelBadgeProps)
   );
 }
 
+export function LiveBadge({ className }: { className?: string }) {
+  return (
+    <span className={cn(BADGE, "border-transparent bg-live text-live-fg", className)}>LIVE</span>
+  );
+}
+
 export function SimulatedBadge({ className }: { className?: string }) {
   return (
     <span className={cn(BADGE, "border-transparent bg-simulated text-simulated-fg", className)}>

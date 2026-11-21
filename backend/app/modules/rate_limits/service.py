@@ -40,6 +40,26 @@ REFRESH_PER_IP = Limit("auth.refresh.ip", 120, 3600)
 OTP_SEND_PER_USER = Limit("auth.otp_send.user", 3, 1800)
 OTP_VERIFY_PER_USER = Limit("auth.otp_verify.user", 20, 1800)
 PROFILE_WRITE_PER_USER = Limit("profile.write.user", 60, 3600)
+# FR-CONTACTS-001 AC1 and FR-CONTACTS-007 AC3. Searches and requests are counted per attempt.
+CONTACT_SEARCH_PER_USER = Limit(
+    "contacts.search.user", 20, 60, message="Too many searches. Please wait a moment."
+)
+CONTACT_REQUEST_PER_USER = Limit(
+    "contacts.request.user",
+    30,
+    86400,
+    message="You have reached today's limit of contact requests.",
+)
+CONTACT_WRITE_PER_USER = Limit("contacts.write.user", 200, 3600)
+# FR-MSG-001 AC5. Attachments: generous for normal use, bounded for storage abuse.
+MESSAGE_SEND_PER_USER = Limit(
+    "chat.send.user", 60, 60, message="You are sending messages too quickly. Please wait a moment."
+)
+ATTACHMENT_UPLOAD_PER_USER = Limit(
+    "chat.attachment.user", 60, 3600, message="Too many uploads. Please try again later."
+)
+CHAT_SEARCH_PER_USER = Limit("chat.search.user", 30, 60, message="Too many searches. Please wait.")
+CHAT_WRITE_PER_USER = Limit("chat.write.user", 300, 3600)
 
 
 class RateLimiter:

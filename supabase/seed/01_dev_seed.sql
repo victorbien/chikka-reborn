@@ -23,19 +23,61 @@ begin
         execute $q$select extensions.crypt('dev-password-only', extensions.gen_salt('bf'))$q$ into v_hash;
     end if;
 
-    insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_user_meta_data)
+    insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_user_meta_data,
+                           raw_app_meta_data, created_at, updated_at)
     values
         ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-         'admin@chikka.test', v_hash, now(), '{"display_name": "Dev Admin"}'),
+         'admin@chikka.test', v_hash, now(), '{"display_name": "Dev Admin"}',
+         '{"provider": "email", "providers": ["email"]}', now(), now()),
         ('00000000-0000-4000-8000-0000000000a2', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-         'alice@chikka.test', v_hash, now(), '{"display_name": "Alice Sample"}'),
+         'alice@chikka.test', v_hash, now(), '{"display_name": "Alice Sample"}',
+         '{"provider": "email", "providers": ["email"]}', now(), now()),
         ('00000000-0000-4000-8000-0000000000a3', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-         'bob@chikka.test', v_hash, now(), '{"display_name": "Bob Sample"}'),
+         'bob@chikka.test', v_hash, now(), '{"display_name": "Bob Sample"}',
+         '{"provider": "email", "providers": ["email"]}', now(), now()),
         ('00000000-0000-4000-8000-0000000000a4', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-         'carol@chikka.test', v_hash, null, '{"display_name": "Carol Pending"}'),
+         'carol@chikka.test', v_hash, null, '{"display_name": "Carol Pending"}',
+         '{"provider": "email", "providers": ["email"]}', now(), now()),
         ('00000000-0000-4000-8000-0000000000a5', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-         'dave@chikka.test', v_hash, now(), '{"display_name": "Dave Suspended"}')
+         'dave@chikka.test', v_hash, now(), '{"display_name": "Dave Suspended"}',
+         '{"provider": "email", "providers": ["email"]}', now(), now())
     on conflict (id) do nothing;
+end
+$$;
+
+-- Hosted Supabase Auth (GoTrue) cannot sign in users that were inserted directly unless the token
+-- columns are empty strings (not NULL) and an email identity row exists. Both fixes are skipped on
+-- the plain PostgreSQL test database, which has neither. Safe to re-run: it repairs existing rows.
+do $$
+declare
+    v_column text;
+begin
+    foreach v_column in array array['confirmation_token', 'recovery_token', 'email_change', 'email_change_token_new']
+    loop
+        if exists (select 1 from information_schema.columns
+                    where table_schema = 'auth' and table_name = 'users' and column_name = v_column) then
+            execute format(
+                'update auth.users set %1$I = coalesce(%1$I, '''') where email like %2$L',
+                v_column, '%@chikka.test');
+        end if;
+    end loop;
+
+    -- Hosted GoTrue also reads these as non-null.
+    update auth.users
+       set raw_app_meta_data = coalesce(raw_app_meta_data, '{"provider": "email", "providers": ["email"]}'::jsonb),
+           created_at = coalesce(created_at, now()),
+           updated_at = coalesce(updated_at, now())
+     where email like '%@chikka.test';
+
+    if to_regclass('auth.identities') is not null then
+        insert into auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+        select u.id::text, u.id,
+               jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', u.email_confirmed_at is not null),
+               'email', now(), now(), now()
+          from auth.users u
+         where u.email like '%@chikka.test'
+           and not exists (select 1 from auth.identities i where i.user_id = u.id);
+    end if;
 end
 $$;
 

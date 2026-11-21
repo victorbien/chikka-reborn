@@ -45,7 +45,16 @@ def test_non_postgres_database_url_is_rejected() -> None:
 def test_live_sms_requires_explicit_confirmation() -> None:
     with pytest.raises(ValidationError, match="SMS_LIVE_CONFIRMED"):
         make(sms_provider_mode="live")
-    assert make(sms_provider_mode="live", sms_live_confirmed=True).sms_mode == "live"
+    with pytest.raises(ValidationError, match="TWILIO_ACCOUNT_SID"):
+        make(sms_provider_mode="live", sms_live_confirmed=True)
+    live = make(
+        sms_provider_mode="live",
+        sms_live_confirmed=True,
+        twilio_account_sid="ACfake",
+        twilio_auth_token="fake-token",
+        sms_public_base_url="https://api.example.test",
+    )
+    assert live.sms_mode == "live"
 
 
 def test_docs_are_disabled_in_production() -> None:
@@ -68,6 +77,31 @@ def test_env_example_values_load(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.cookie_secure is None
     assert settings.supabase_anon_key is None
     assert settings.sms_provider_mode == "mock"
+
+
+def test_env_example_contains_no_real_secrets() -> None:
+    # Regression: a real database password, JWT secret and service-role key were pasted into the
+    # committed example file. It may only hold blanks, placeholders and non-sensitive defaults.
+    import re
+    from pathlib import Path
+
+    sensitive_name = re.compile(
+        r"(SECRET|_KEY|PASSWORD|AUTH_TOKEN|DATABASE_URL|JWKS_URL|SUPABASE_URL|_SID)$"
+    )
+    jwt_shape = re.compile(r"eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.")
+    url_with_password = re.compile(r"://[^/\s:@]+:[^/\s@]+@")
+    example = Path(__file__).parents[2] / ".env.example"
+    problems: list[str] = []
+    for number, line in enumerate(example.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip() or line.lstrip().startswith("#") or "=" not in line:
+            continue
+        name, _, value = line.partition("=")
+        value = value.strip()
+        if jwt_shape.search(value) or url_with_password.search(value):
+            problems.append(f"line {number}: {name} looks like a real credential")
+        elif sensitive_name.search(name) and value and not value.lower().startswith("change-me"):
+            problems.append(f"line {number}: {name} must be blank or a placeholder")
+    assert problems == [], problems
 
 
 def test_secure_cookies_default_by_environment() -> None:

@@ -26,7 +26,15 @@ class Profile(Base):
     role: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text)
     onboarding_completed_at: Mapped[datetime | None]
+    status_message: Mapped[str | None] = mapped_column(Text)
     presence_preference: Mapped[str] = mapped_column(Text)
+    profile_visibility: Mapped[str] = mapped_column(Text)
+    share_presence: Mapped[str] = mapped_column(Text)
+    show_last_seen: Mapped[bool]
+    discoverable_by_phone: Mapped[bool]
+    discoverable_by_email: Mapped[bool]
+    send_typing_indicators: Mapped[bool]
+    send_read_receipts: Mapped[bool]
     last_seen_at: Mapped[datetime | None]
     suspended_at: Mapped[datetime | None]
     deletion_requested_at: Mapped[datetime | None]

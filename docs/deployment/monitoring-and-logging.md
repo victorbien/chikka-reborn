@@ -224,3 +224,62 @@ No user message content should be captured by Sentry. Configure `beforeSend` to 
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | November 2026 | Kiro (Principal Architect) | Initial draft |
+
+---
+
+## 10. Production Monitoring Guide
+
+What to watch once the system is deployed. Everything here uses signals the application already produces; no new library is required. Alert thresholds are starting points to tune after a week of real traffic.
+
+### 10.1 Signals available today
+
+| Signal | Source | Notes |
+|---|---|---|
+| Liveness | `GET /healthz` | 200 while the process is up |
+| Readiness | `GET /readyz` | 503 when the database is unreachable |
+| Access log | JSON line `request completed` (`method`, `path`, `status_code`, `duration_ms`, `request_id`) | Path only, never the query string |
+| Application events | JSON lines: `application starting` (mode flags), `ai request` (feature, outcome, tokens, latency), `webhook rejected`, `malformed webhook`, `duplicate webhook ignored`, `sms provider mismatch`, `audit write failed`, `unhandled exception` (error type only) | Never contains message text, tokens or unmasked numbers |
+| Audit trail | `audit_logs` (admin dashboard, `GET /api/v1/admin/audit-logs`) | `auth.lockout`, `admin.access_denied`, `sms.webhook_rejected`, `sms.send_denied`, `sms.queued`, `sms.inbound_unrouted`, `account.deleted` |
+| SMS health | SMS administration -> delivery health (`GET /api/v1/admin/sms/monitoring`) | Failure and delivery rates for the last 24 h, pending and unrouted counts |
+| AI usage | `GET /api/v1/admin/ai/metrics` | Requests, failures, tokens, optional cost estimate |
+| Platform metrics | Hosting platform (CPU, memory, restarts, response codes) | Not produced by the app |
+| Vercel | Deployments, build logs, Web Analytics (optional) | Frontend errors are not collected centrally yet |
+
+There is no metrics endpoint (Prometheus or similar) and no error tracker for the frontend. Ship stdout to a log service that can alert on a JSON field (for example `status_code`, `level`, `message`).
+
+### 10.2 Alerts to create
+
+| Alert | Condition | First action |
+|---|---|---|
+| API down | `/healthz` fails 3 checks in a row (1 min interval) from an external monitor | troubleshooting.md section 1 |
+| Database down | `/readyz` 503 for 2 minutes | Supabase status, credentials, connection limit |
+| Elevated 5xx | `status_code >= 500` over 1% of requests for 5 minutes | Look up a `request_id`; consider rollback |
+| Latency | p95 `duration_ms` above 1,500 for 10 minutes | Database load, provider timeouts |
+| Restarts | Container restarted more than twice in 15 minutes | Logs before the exit, memory limit |
+| Auth abuse | `auth.lockout` audit rows above 20 in 15 minutes, or `admin.access_denied` above 0 | Review IPs, consider blocking at the edge |
+| Webhook rejections (live) | `sms.webhook_rejected` above 5 in 10 minutes | A real Twilio problem (URL or token) or probing. See troubleshooting section 8 |
+| SMS failures (live) | Failure rate above 10% over 1 hour, or any message `queued` longer than 15 minutes | Provider status, worker running, pause if needed |
+| Unrouted inbound (live) | Any new row | Reply with no route: review in SMS administration |
+| AI failures | `ai request` with outcome other than `success` above 20% in 15 minutes | bedrock-setup.md section 4 |
+| Spend (live) | Twilio usage trigger; AWS Budgets alert | Pause sending or AI |
+| Certificate / domain | Expiry within 14 days | Renew |
+| Security headers | Weekly external check of `curl -I` for the 3 headers | Regression after a platform change |
+
+### 10.3 Routine checks
+
+- **Daily (first week, then weekly):** error rate, SMS delivery health, unrouted queue, AI failure share, number of new sign-ups versus confirmation emails sent.
+- **Weekly:** `pip-audit -r backend/requirements.txt` and `npm audit --omit=dev`; review `admin.access_denied` and `auth.lockout` rows; confirm backups ran.
+- **Monthly:** restore test of a backup into a scratch project; rotate keys that have an expiry (Bedrock); review rate limits against real use; re-check each enabled country's SMS requirements.
+- **Data retention:** no automatic purge exists yet (audit SEC-007). Until it does, review `provider_webhooks` and `audit_logs` size monthly.
+
+### 10.4 Log privacy checks
+
+After the first day on a new environment, search the log service for strings that must never appear. Each search should return nothing:
+
+- `Bearer ` or `eyJ` (tokens)
+- `@` followed by a domain in non-email log fields (email addresses)
+- `+` followed by 8 or more digits (unmasked phone numbers; masked ones look like `+63****1234`)
+- the Twilio Account SID prefix or any part of an API key
+- message or draft text from your test conversations
+
+Any hit is a defect: stop, fix, rotate affected secrets, and record it.

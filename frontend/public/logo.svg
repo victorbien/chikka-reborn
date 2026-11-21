@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 220" role="img" aria-labelledby="logo-title">
+  <title id="logo-title">Chikka Reborn</title>
+  <defs>
+    <linearGradient id="orange" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFB347"/>
+      <stop offset="1" stop-color="#F26A00"/>
+    </linearGradient>
+    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9B6BFF"/>
+      <stop offset="1" stop-color="#5B2BD6"/>
+    </linearGradient>
+  </defs>
+  <!-- Mark: speech bubble with three typing dots -->
+  <g transform="translate(20 30)">
+    <path d="M20 0h120a20 20 0 0 1 20 20v70a20 20 0 0 1-20 20H70l-34 30v-30H20A20 20 0 0 1 0 90V20A20 20 0 0 1 20 0Z" fill="url(#orange)"/>
+    <circle cx="48" cy="55" r="11" fill="#fff"/>
+    <circle cx="80" cy="55" r="11" fill="#fff"/>
+    <circle cx="112" cy="55" r="11" fill="url(#purple)"/>
+    <path d="M128 -6l5 11 11 5-11 5-5 11-5-11-11-5 11-5Z" fill="#9B6BFF"/>
+  </g>
+  <!-- Wordmark -->
+  <text x="210" y="102" font-family="'Nunito','Poppins','Segoe UI',Arial,sans-serif" font-size="76" font-weight="800" fill="url(#orange)" letter-spacing="-1">chikka</text>
+  <text x="212" y="163" font-family="'Nunito','Poppins','Segoe UI',Arial,sans-serif" font-size="56" font-weight="800" fill="url(#purple)" letter-spacing="2">reborn</text>
+</svg>

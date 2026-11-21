@@ -239,3 +239,13 @@ Part of the [Functional Requirements Specification](../functional-requirements.m
 | Error scenarios | Not a contact or blocked: 403 with neutral message. |
 | Dependencies | FR-CONTACTS-010. |
 | Acceptance criteria | AC1 A unique pair constraint prevents duplicates. AC2 Creation is idempotent. AC3 Focus moves to the compose box for keyboard users. |
+
+---
+
+## Implementation status
+
+Implemented (Implementation 04): FR-MSG-001, 002, 003, 004, 006, 007, 008, 009 (conversation-level search), 010, 012 (archive), 013. Real time uses the backend WebSocket gateway (ADL-020), not Supabase Realtime: where this document says `Supabase Realtime`, read the gateway in [realtime-api.md](../../api/realtime-api.md). The 10-second polling fallback is replaced by REST resync on reconnect plus a 60-second list refresh.
+
+Not yet: FR-MSG-005 (delete), FR-MSG-011 (edit), FR-MSG-012 pin, mute and mark unread (the columns exist; no UI yet), offline notifications (Module G).
+
+Differences to note: timestamps use the browser's time zone, not the profile setting. Read receipts default off and are set in the database until a settings toggle is added (FR-PRIVACY-005).

@@ -1,0 +1,17 @@
+{
+  "check": "docs",
+  "note": "Findings accepted as existing. Regenerate with --update-baseline after review.",
+  "accepted": [
+    "endpoint-undocumented|backend/app/modules/sms/admin_router.py|GET /api/v1/admin/sms/capabilities",
+    "endpoint-undocumented|backend/app/modules/sms/admin_router.py|GET /api/v1/admin/sms/inbound/unrouted",
+    "endpoint-undocumented|backend/app/modules/sms/admin_router.py|GET /api/v1/admin/sms/monitoring",
+    "endpoint-undocumented|backend/app/modules/sms/admin_router.py|GET /api/v1/admin/sms/providers",
+    "endpoint-undocumented|backend/app/modules/sms/admin_router.py|PATCH /api/v1/admin/sms/providers/{provider_id}",
+    "endpoint-undocumented|backend/app/modules/sms/admin_router.py|POST /api/v1/admin/sms/providers/{provider_id}/activate",
+    "endpoint-undocumented|backend/app/modules/sms/admin_router.py|POST /api/v1/admin/sms/simulate/inbound",
+    "endpoint-undocumented|backend/app/modules/sms/admin_router.py|PUT /api/v1/admin/sms/capabilities/{country_code}",
+    "endpoint-undocumented|backend/app/modules/sms/admin_router.py|PUT /api/v1/admin/sms/outbound-paused",
+    "endpoint-undocumented|backend/app/modules/sms/webhook_router.py|POST /api/v1/webhooks/{provider}/inbound",
+    "endpoint-undocumented|backend/app/modules/sms/webhook_router.py|POST /api/v1/webhooks/{provider}/status"
+  ]
+}

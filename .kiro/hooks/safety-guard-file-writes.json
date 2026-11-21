@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Safety: block secrets, ask before sensitive file changes",
+      "trigger": "PreToolUse",
+      "description": "Blocks writes that contain credential-shaped values, and asks before changing real .env files, committed migrations, hooks, steering or hook scripts.",
+      "matcher": "fs_write|str_replace|fs_append|delete_file",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/hooks/run.ps1 guard-write",
+        "timeout": 20
+      }
+    }
+  ]
+}

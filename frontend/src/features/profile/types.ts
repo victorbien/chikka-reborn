@@ -19,6 +19,7 @@ export interface Profile {
   email_verified: boolean;
   avatar_url: string | null;
   bio: string | null;
+  status_message: string | null;
   country_code: string | null;
   language: string;
   time_zone: string;
@@ -31,6 +32,18 @@ export interface Profile {
   phone: PhoneSummary | null;
   created_at: string;
   updated_at: string;
+}
+
+export type ProfileVisibility = "everyone" | "contacts" | "private";
+export type SharePresence = "everyone" | "contacts" | "nobody";
+
+/** Mirrors PrivacySettings in backend/app/modules/profiles/schemas.py. */
+export interface PrivacySettings {
+  profile_visibility: ProfileVisibility;
+  share_presence: SharePresence;
+  show_last_seen: boolean;
+  discoverable_by_email: boolean;
+  discoverable_by_phone: boolean;
 }
 
 export interface PresenceInfo {

@@ -3,7 +3,7 @@
 **Document:** CHKR-ARCH-013  
 **Project:** Chikka Reborn  
 **Version:** 0.1  
-**Status:** Proposed — awaiting review  
+**Status:** Accepted (ADL-013), implemented in Implementation 04 with in-process fan-out (ADL-020). The NOTIFY listener in section 2 is deferred until a second backend instance runs. Wire protocol: [realtime-api.md](../api/realtime-api.md).  
 **Last Revised:** November 2026  
 
 ---

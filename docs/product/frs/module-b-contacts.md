@@ -255,3 +255,9 @@ Part of the [Functional Requirements Specification](../functional-requirements.m
 | Error scenarios | Subscription failure: fall back to polling every 60 seconds or hide indicators. |
 | Dependencies | FR-AUTH-013, FR-PRIVACY-005. |
 | Acceptance criteria | AC1 Updates visible within 5 seconds. AC2 Status uses text plus icon, not colour alone. AC3 Last seen is hidden when the contact opted out. |
+
+---
+
+## Implementation status
+
+Implemented: FR-CONTACTS-001, 003, 004, 005, 007, 009, 010, 011, 012, 013, 014. Not yet: FR-CONTACTS-002 (SMS contacts), 006 (mute), 008 (import). Behaviour details and the discovery decision are in [contacts-api.md](../../api/contacts-api.md) and DEC-PROD-004 in the decision log.

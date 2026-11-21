@@ -9,6 +9,7 @@ from app.core.exceptions import (
     ServiceUnavailableError,
 )
 from app.core.security import AuthenticatedUser, TokenClaims
+from app.core.storage_paths import owned_avatar_path
 from app.database.session import Database
 from app.integrations.auth_provider import AuthProvider, AuthUnavailableError
 from app.integrations.otp_delivery import SimulatedInbox
@@ -100,7 +101,7 @@ class AccountService:
                 raise PermissionDeniedError(
                     "This account is not available.", code="account_unavailable"
                 )
-            old_avatar = profile.avatar_path
+            old_avatar = owned_avatar_path(user.id, profile.avatar_path)
             await profiles.apply(
                 profile,
                 {

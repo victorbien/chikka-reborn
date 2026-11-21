@@ -240,9 +240,20 @@ Email address
 
 ## 8. Classic Mode Design Direction
 
-Classic Mode applies a separate CSS theme (`classic-theme.css`) via `data-mode="classic"` on the root element. Component logic is identical; only visual presentation changes.
+Classic Mode sets `data-mode="classic"` on the root element. The tokens in `frontend/src/styles/index.css` change (palette, square corners, Tahoma-style type, bevel, density). Data hooks and services are identical in both modes; only the shell and message-page layout differ.
 
-Design direction (subject to completion of OD-005):
+Implemented (Phase 5, Module K):
+
+| Area | Classic | Modern |
+|---|---|---|
+| Shell | Compact title and menu bar, `max-w-4xl` | Standard header, full width on `/messages` |
+| Messages | Buddy list (Online / Offline groups, nicknames, unread envelope that blinks) plus a chat window with a title bar | Chats and People tabs, conversation, and on desktop (`lg`, 1024px) a side column with delivery details and the AI assistant |
+| Small screens | One pane at a time (buddy list or chat) | One pane at a time; the AI assistant stays in the composer |
+| Bubbles | Square with a small tail (`data-bubble`) | Rounded |
+
+The choice is applied at once, kept in `localStorage` for first paint, and saved to `profiles.ui_mode` (header toggle and Settings). The saved profile value wins after sign-in. If saving fails, the previous mode returns. Keyboard: Up/Down/Home/End move through conversation and buddy lists, `/` focuses search. Archiving asks for confirmation. Motion respects `prefers-reduced-motion`.
+
+Original design direction (subject to completion of OD-005):
 - Warm background tones (cream / off-white) evoking early-2000s web.
 - Chunky bordered panels with slight drop shadows.
 - Buddy list with "Online / Offline" group headers.

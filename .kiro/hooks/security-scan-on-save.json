@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Security: credentials, webhooks, authentication and authorisation on save",
+      "trigger": "PostFileSave",
+      "description": "Looks for credential-shaped values, sensitive values in logs, unverified webhooks, routes without authentication and unused principals. Stores rule and line only, never the matched text.",
+      "matcher": "(backend[\\\\/](app|tests)|frontend[\\\\/]src|supabase|scripts|docs)[\\\\/].*\\.(py|ts|tsx|sql|ps1|toml|ya?ml|md)$|\\.example$",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/hooks/run.ps1 security",
+        "timeout": 60
+      }
+    }
+  ]
+}

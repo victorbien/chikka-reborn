@@ -47,7 +47,7 @@ export function SmsCostEstimate({
         {estimate.characters} chars · {estimate.segments}{" "}
         {estimate.segments === 1 ? "segment" : "segments"} ·{" "}
         {estimate.encoding === "gsm7" ? "GSM-7" : "Unicode"} ·{" "}
-        {simulated ? "No credits charged (simulation)" : `${cost.toFixed(2)} credits`}
+        {simulated ? "Demo credits only (simulation)" : `${cost.toFixed(2)} credits`}
       </p>
       {shortfallBalance !== null ? (
         <p role="alert" className="text-danger">

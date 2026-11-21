@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Quality: TypeScript format, lint and types on save",
+      "trigger": "PostFileSave",
+      "description": "Runs eslint and prettier --check on the saved frontend file and tsc --noEmit for the project.",
+      "matcher": "frontend[\\\\/]src[\\\\/].*\\.(ts|tsx)$",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/hooks/run.ps1 quality",
+        "timeout": 200
+      }
+    }
+  ]
+}

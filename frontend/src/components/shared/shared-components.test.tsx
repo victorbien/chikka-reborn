@@ -20,7 +20,7 @@ describe("estimateSms", () => {
   });
   it("switches to unicode with a 70 character limit", () => {
     expect(estimateSms("é".repeat(1) + "😀")).toMatchObject({ encoding: "unicode", segments: 1 });
-    expect(estimateSms("😀".repeat(71)).segments).toBe(2);
+    expect(estimateSms("😀".repeat(36)).segments).toBe(2); // 72 UTF-16 units, as on the server
   });
   it("masks phone numbers", () => {
     expect(maskPhoneNumber("+639171231234")).toBe("+63****1234");
@@ -67,11 +67,11 @@ describe("MessageBubble", () => {
 });
 
 describe("SmsCostEstimate", () => {
-  it("charges nothing in simulation", () => {
+  it("uses demo credits only in simulation", () => {
     render(
       <SmsCostEstimate body="Hello" smsMode="simulated" creditsPerSegment={1} creditBalance={0} />,
     );
-    expect(screen.getByText(/No credits charged/)).toBeInTheDocument();
+    expect(screen.getByText(/Demo credits only/)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
   it("warns when live cost exceeds balance", () => {

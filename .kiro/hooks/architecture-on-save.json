@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Architecture: cycles, provider dependencies, duplication on save",
+      "trigger": "PostFileSave",
+      "description": "Reviews the whole codebase for circular dependencies, vendor or concrete-provider imports in services, cross-module repository use, duplicated functions and oversized code. Only new findings are reported.",
+      "matcher": "backend[\\\\/]app[\\\\/].*\\.py$|frontend[\\\\/]src[\\\\/].*\\.tsx?$",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/hooks/run.ps1 architecture",
+        "timeout": 90
+      }
+    }
+  ]
+}

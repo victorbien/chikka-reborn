@@ -34,6 +34,7 @@ from app.integrations.auth_provider import (
 from app.modules.audit.service import AuditLogger
 from app.modules.auth.repositories import AuthSessionRepository, ConsentRepository
 from app.modules.auth.schemas import SessionInfo
+from app.modules.notifications.service import create_notification
 from app.modules.profiles.presence import PresenceRegistry
 from app.modules.profiles.repository import ProfileRepository
 from app.modules.rate_limits import service as limits
@@ -317,6 +318,13 @@ class AuthService:
                 actor_id=user_id,
                 ip=meta.ip,
             )
+            await create_notification(
+                session,
+                user_id=user_id,
+                notification_type="security",
+                title="Your password was reset",
+                body="All your devices were signed out. If this wasn't you, reset it again now.",
+            )
 
     # -- re-authentication ---------------------------------------------------------------
 
@@ -408,6 +416,14 @@ class AuthService:
                 ip=meta.ip,
                 metadata={"count": count},
             )
+            if count:
+                await create_notification(
+                    session,
+                    user_id=user.id,
+                    notification_type="security",
+                    title="You signed out of your other devices",
+                    body=f"{count} other session(s) were ended from this account.",
+                )
         return count
 
 

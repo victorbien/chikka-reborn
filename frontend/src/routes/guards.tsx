@@ -4,12 +4,19 @@ import { Avatar } from "@/components/shared/Avatar";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { PageLoader } from "@/components/common/PageLoader";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { MAIN_NAV_ITEMS, PUBLIC_NAV_ITEMS } from "@/components/navigation/MainNav";
+import { ADMIN_NAV_ITEMS, MAIN_NAV_ITEMS, PUBLIC_NAV_ITEMS } from "@/components/navigation/MainNav";
 import { SignOutButton } from "@/features/auth/components/SignOutButton";
+import { ChatRealtimeBridge } from "@/features/chat/components/ChatRealtimeBridge";
+import { CreditBadge } from "@/features/credits/components/CreditBadge";
+import { CreditsRealtimeBridge } from "@/features/credits/components/CreditsRealtimeBridge";
+import { NotificationBell } from "@/features/notifications/components/NotificationBell";
+import { NotificationRealtimeBridge } from "@/features/notifications/components/NotificationRealtimeBridge";
+import { ModeToggle } from "@/features/profile/components/ModeToggle";
 import { usePresence } from "@/features/profile/hooks/usePresenceHeartbeat";
 import { useMe } from "@/features/profile/hooks/useProfile";
 import { useSession } from "@/lib/auth/session";
 import { useDisplayMode } from "@/lib/display-mode";
+import { RealtimeProvider } from "@/lib/realtime/provider";
 import { toUserFacingError } from "@/lib/error-handling";
 import { paths } from "@/lib/paths";
 
@@ -86,24 +93,35 @@ export function SignedInAppLayout() {
   }, [uiMode, setMode]);
 
   return (
-    <AppLayout
-      navItems={MAIN_NAV_ITEMS}
-      headerActions={
-        me.data ? (
-          <>
-            <span className="flex items-center gap-2 text-sm">
-              <Avatar
-                name={me.data.display_name}
-                imageUrl={me.data.avatar_url ?? undefined}
-                size="sm"
-              />
-              <span className="hidden sm:inline">{me.data.display_name}</span>
-            </span>
-            <SignOutButton onSignedOut={() => navigate(paths.signIn, { replace: true })} />
-          </>
-        ) : null
-      }
-    />
+    // One real-time connection for the whole signed-in app (active accounts only).
+    <RealtimeProvider enabled={me.data?.status === "active" && me.data.onboarding_completed}>
+      <ChatRealtimeBridge />
+      <NotificationRealtimeBridge />
+      <CreditsRealtimeBridge />
+      <AppLayout
+        navItems={
+          me.data?.role === "admin" ? [...MAIN_NAV_ITEMS, ...ADMIN_NAV_ITEMS] : MAIN_NAV_ITEMS
+        }
+        headerActions={
+          me.data ? (
+            <>
+              <CreditBadge />
+              <ModeToggle />
+              <NotificationBell />
+              <span className="flex items-center gap-2 text-sm">
+                <Avatar
+                  name={me.data.display_name}
+                  imageUrl={me.data.avatar_url ?? undefined}
+                  size="sm"
+                />
+                <span className="hidden sm:inline">{me.data.display_name}</span>
+              </span>
+              <SignOutButton onSignedOut={() => navigate(paths.signIn, { replace: true })} />
+            </>
+          ) : null
+        }
+      />
+    </RealtimeProvider>
   );
 }
 

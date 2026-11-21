@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Housekeeping: drop findings for deleted files",
+      "trigger": "PostFileDelete",
+      "description": "Removes stored findings for a file that no longer exists.",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/hooks/run.ps1 forget",
+        "timeout": 20
+      }
+    }
+  ]
+}

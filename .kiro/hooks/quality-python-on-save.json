@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Quality: Python format, lint and types on save",
+      "trigger": "PostFileSave",
+      "description": "Runs ruff check, ruff format --check and mypy for the saved backend file. Findings are stored and shown at the next prompt.",
+      "matcher": "backend[\\\\/](app|tests)[\\\\/].*\\.py$",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/hooks/run.ps1 quality",
+        "timeout": 150
+      }
+    }
+  ]
+}

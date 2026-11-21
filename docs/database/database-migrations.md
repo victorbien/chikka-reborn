@@ -46,8 +46,14 @@ Defines how Chikka Reborn database changes are written, ordered, applied and, wh
 | `20261110000014_lockdown_private_functions` | Explicit `EXECUTE` grants for the `private` schema | all |
 | `20261110000015_rate_limit_counters` | `rate_limit_counters` | foundation |
 | `20261111000001_avatars_bucket` | private Storage bucket `avatars` (WebP only, 512 KB); no client policies, backend writes with the service role; skipped where `storage` is absent | 20261110000002 |
+| `20261111000002_contacts_discovery` | Status message and email discoverability on profiles; backend-only exact email lookup | 20261110000002, 20261110000005 |
+| `20261111000003_chat_attachments` | `message_attachments`, attachment-only messages, private bucket `message-attachments` | 20261110000006, 20261110000007 |
+| `20261112000001_sms_gateway` | Country capability pricing and provider settings, redacted provider responses per attempt, simulation sender numbers | 20261110000003, 20261110000008, 20261110000013 |
+| `20261113000001_notifications_delivery` | Notification de-duplication and grouping, delivery outbox, `security` type | 20261110000010 |
+| `20261113000002_fix_attachment_select_policy` | Fixes `message_attachments_select_member`: members got "permission denied" because the policy read the ungranted `messages.suppressed_at`. Moves the check into `private.can_see_attachment_message()` (security definer) and honours `message_hides` | 20261111000003 |
+| `20261120000001_profiles_avatar_path_guard` | Security audit SEC-001. Revokes client `UPDATE (avatar_path)` and adds `ck_profiles_avatar_path` (`NOT VALID`: new and changed rows only; operators validate after cleaning legacy rows) | 20261110000002 |
 
-Development seed: `supabase/seed/01_dev_seed.sql`. Test support and tests: `supabase/tests/`.
+Development seed: `supabase/seed/01_dev_seed.sql` (5 accounts) and `supabase/seed/02_demo_data.sql` (20 accounts with simulated SMS, credits, AI usage, reports and audit rows for the admin dashboard). Wipe script: `supabase/tools/reset_dev_data.sql`. Test support and tests: `supabase/tests/`.
 
 Tables are grouped by dependency rather than by phase because all tables must exist before the backend modules are built. Phase tags on each file show when the behaviour is first used. The old per-phase plan (outbound_sms, credit_accounts, and so on) no longer applies.
 
@@ -95,8 +101,9 @@ Adding a `CHECK` or `NOT NULL` to a table that has data is treated as risky: add
 |---|---|---|
 | Reference data (settings, provider rows, UNVERIFIED capabilities) | A migration, idempotent (`ON CONFLICT DO NOTHING`) | Every environment |
 | Development users and sample conversations | `supabase/seed/01_dev_seed.sql` | Local and disposable dev only |
+| Bulk demo data for the admin dashboard | `supabase/seed/02_demo_data.sql` | Local and disposable dev only |
 
-The development seed refuses to run when `app.environment` is `production` or `staging`. It contains only fictional people, `.test` emails and numbers in the reserved `+1 555 01xx` range. Never put real numbers or personal data in seeds or tests.
+To start over, run `supabase/tools/reset_dev_data.sql` (it keeps settings, provider rows and country capabilities, and stops if a new table is not listed in it), then the seed files in order. Both seeds refuse to run when `app.environment` is `production` or `staging`. It contains only fictional people, `.test` emails and numbers in the reserved `+1 555 01xx` range. Never put real numbers or personal data in seeds or tests.
 
 Every country capability is seeded as `requires_verification`. Nothing is `supported` until an administrator records verification (the database rejects `supported` without it). The Philippines is additionally marked `not_registered` for sender registration.
 

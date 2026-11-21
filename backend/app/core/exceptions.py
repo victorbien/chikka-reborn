@@ -76,9 +76,21 @@ class RateLimitedError(AppError):
         )
 
 
+class PayloadTooLargeError(AppError):
+    status_code = 413
+    code = "payload_too_large"
+
+
 class ServiceUnavailableError(AppError):
     status_code = 503
     code = "service_unavailable"
+
+
+class BadGatewayError(AppError):
+    """An upstream provider (for example the AI model) failed. The message is generic."""
+
+    status_code = 502
+    code = "provider_error"
 
 
 def error_response(

@@ -48,7 +48,8 @@ All three environments: development, staging, production.
 |---|---|---|
 | `SUPABASE_URL` | Supabase project API URL | `https://xxx.supabase.co` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Backend service role key — bypasses RLS | `eyJhbGci...` |
-| `SUPABASE_JWT_SECRET` | Used to verify Supabase JWTs in FastAPI | `super-secret-...` |
+| `SUPABASE_JWT_SECRET` | Legacy shared secret; verifies HS256 access tokens. Optional on projects using signing keys | `super-secret-...` |
+| `SUPABASE_JWKS_URL` | Optional. Public keys for ES256/RS256 access tokens. Defaults to `SUPABASE_URL/auth/v1/.well-known/jwks.json` | `https://xxx.supabase.co/auth/v1/.well-known/jwks.json` |
 | `SMS_PROVIDER_MODE` | `mock` or `live` | `mock` |
 | `LOG_LEVEL` | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`) | `INFO` |
 | `APP_ENV` | `development`, `test`, `staging` or `production`. API docs are disabled in `production` | `development` |
@@ -60,26 +61,65 @@ All three environments: development, staging, production.
 | `COOKIE_SECURE` | Override for the refresh cookie `Secure` flag. Default: on in `staging`/`production`, off in local development | (unset) |
 | `TERMS_VERSION`, `PRIVACY_VERSION` | Notice versions recorded with registration consent | `2026-11-01` |
 | `AVATAR_BUCKET` | Supabase Storage bucket for profile photos | `avatars` |
+| `ATTACHMENT_BUCKET` | Private Storage bucket for message attachments (created by migration `20261111000003`) | `message-attachments` |
 
 ### Required — Live SMS Mode Only
 
 | Variable | Description |
 |---|---|
 | `TWILIO_ACCOUNT_SID` | Twilio account identifier |
-| `TWILIO_AUTH_TOKEN` | Twilio API authentication token |
-| `TWILIO_PHONE_NUMBER` | Platform's outbound Twilio number (E.164) |
-| `TWILIO_WEBHOOK_SECRET` | Signing secret for validating Twilio webhooks |
+| `TWILIO_AUTH_TOKEN` | Twilio API auth token. Also the key that signs Twilio webhooks, so there is no separate webhook secret |
+| `SMS_PUBLIC_BASE_URL` | Public HTTPS origin of this backend (for example `https://api.example.com`). Twilio signs the exact URL it calls, so the signature check uses this value, never the `Host` header |
 
-These variables are validated at startup when `SMS_PROVIDER_MODE=live`. The application fails to start without them if live mode is configured.
+Sender numbers are not environment variables. They are non-secret settings stored on the provider row (`provider_configurations.settings.sender_numbers`) and edited by administrators. Sending also needs, per country, a capability row marked `supported` with recorded verification, a configured price, and (for the Philippines) an approved sender registration. See [sms-live-activation.md](sms-live-activation.md).
 
-### Required — AI Features (Phase 3+)
+These variables are validated at startup when `SMS_PROVIDER_MODE=live`. The application fails to start without them. It never falls back to simulation.
 
-| Variable | Description |
-|---|---|
-| `AWS_REGION` | AWS region where Bedrock is available (e.g. `us-east-1`) |
-| `AWS_ACCESS_KEY_ID` | IAM user access key — Bedrock invoke permissions only |
-| `AWS_SECRET_ACCESS_KEY` | IAM user secret key |
-| `BEDROCK_MODEL_ID` | Model identifier (e.g. `anthropic.claude-3-haiku-20240307-v1:0`) |
+### Optional — SMS subsystem
+
+| Variable | Default | Description |
+|---|---|---|
+| `SMS_MOCK_WEBHOOK_SECRET` | random per process | Key for the simulation's webhook signer. Set it when several instances share one simulation |
+| `SMS_WORKER_ENABLED` | `true` | Runs the in-process worker (dispatch, retries, reconciliation, simulated callbacks). Tests turn it off |
+| `SMS_WORKER_POLL_SECONDS` | `1` | How often the worker looks for due work when nothing wakes it |
+| `SMS_AMBIGUOUS_WINDOW_SECONDS` | `900` | How long a message with an unknown outcome waits for proof before it is marked failed |
+| `SMS_QUEUE_MAX_AGE_SECONDS` | `86400` | A message still queued after this long (for example during a provider outage) is marked failed |
+| `SMS_ATTESTATION_VERSION` | `2026-11-01` | Version of the sender-permission wording recorded with each consent |
+
+Retry attempts, backoff and rate limits are not environment variables: they live in `provider_configurations` and `system_settings` so administrators can change them (`max_retry_attempts`, `retry_base_seconds`, `retry_cap_seconds`, `sms_user_limit_per_hour`, `sms_recipient_limit_per_hour`).
+### Optional - Notifications and email
+
+Notification email defaults to the mock provider: nothing is sent to a real mailbox. `EMAIL_PROVIDER_MODE=smtp` needs `SMTP_HOST` and `EMAIL_FROM_ADDRESS` and fails at startup without them; it never falls back to the mock.
+
+| Variable | Default | Description |
+|---|---|---|
+| `EMAIL_PROVIDER_MODE` | `mock` | `mock` or `smtp` |
+| `EMAIL_FROM_ADDRESS` | none | Sender address. Required for `smtp` |
+| `SMTP_HOST` | none | SMTP server. Required for `smtp` |
+| `SMTP_PORT` | `587` | SMTP port |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | none | Credentials, if the server needs them. Backend only, never logged |
+| `SMTP_STARTTLS` | `true` | Upgrade the connection with STARTTLS |
+| `NOTIFICATIONS_WORKER_ENABLED` | `true` | Runs the dispatcher that announces notifications to open sessions and sends email. Tests turn it off |
+| `NOTIFICATIONS_WORKER_POLL_SECONDS` | `1` | How often the dispatcher looks for new work |
+
+Simulated credit amounts are not environment variables: `system_settings.demo_grant_units` (default 5000, so 50 credits) and `sms_demo_units_per_segment` (default 100) are administrator settings, and each user sets their own low-balance threshold in notification settings.
+
+### Optional - AI assistant
+
+The assistant defaults to the mock provider: it calls nothing external and returns canned demo drafts, which the UI labels as a demo. `AI_PROVIDER_MODE=bedrock` needs all three Bedrock values below; startup fails without them and never falls back to the mock. Credentials are backend-only.
+
+| Variable | Default | Description |
+|---|---|---|
+| `AI_PROVIDER_MODE` | `mock` | `mock` or `bedrock` |
+| `BEDROCK_REGION` | none | AWS region where the model is enabled (for example `us-east-1`). Required for `bedrock` |
+| `BEDROCK_MODEL_ID` | none | Bedrock model identifier. Required for `bedrock`. Check that it handles Filipino and the regional languages you offer |
+| `BEDROCK_API_KEY` | none | Bedrock API key, sent as a bearer token to the Converse API. Required for `bedrock`. Never logged, never sent to the browser |
+| `AI_TIMEOUT_SECONDS` | `15` | Per-request timeout for the model call |
+| `AI_MAX_OUTPUT_TOKENS` | `600` | Upper bound on the model's answer length |
+| `AI_COST_PER_1K_INPUT_USD` | none | Optional list price per 1,000 input tokens. With the output price, lets the admin dashboard show an approximate AI cost. Unset means no cost is shown |
+| `AI_COST_PER_1K_OUTPUT_USD` | none | Optional list price per 1,000 output tokens |
+
+The kill switch (`system_settings.ai_enabled`) and the per-user hourly limit (`system_settings.ai_user_limit_per_hour`, default 30) are runtime settings, not environment variables. Each user also has to turn the assistant on for their own account (`profiles.ai_enabled`, default off).
 
 ### Optional — Tuning
 
@@ -88,10 +128,7 @@ These variables are validated at startup when `SMS_PROVIDER_MODE=live`. The appl
 | `DB_POOL_SIZE` | `10` | SQLAlchemy connection pool size (1-50) |
 | `DB_MAX_OVERFLOW` | `20` | Pool overflow connections |
 | `RATE_LIMIT_LOGIN` | `5` | Max failed logins per 15 min per IP |
-| `RATE_LIMIT_SMS_DAILY` | `500` | Max SMS sends per user per day |
 | `RATE_LIMIT_AI_HOURLY` | `50` | Max AI requests per user per hour |
-| `SMS_MAX_RETRIES` | `3` | Max SMS retry attempts before permanently_failed |
-| `SMS_RETRY_BASE_DELAY_S` | `30` | Base retry delay in seconds |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed CORS origins |
 
 ---
@@ -119,7 +156,7 @@ Two example files are committed (`backend/.env.example` and `frontend/.env.examp
 
 ### `backend/.env.example`
 
-> The committed file currently contains only the variables the code reads (foundation plus Module A: `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_SECRET_KEY`, `FRONTEND_BASE_URL`, `COOKIE_SECURE`, `TERMS_VERSION`, `PRIVACY_VERSION`, `AVATAR_BUCKET`). Twilio, AWS/Bedrock, service-role and rate-limit variables are added in the phase that first reads them, so the example never lists settings that do nothing.
+> The committed file currently contains only the variables the code reads (foundation plus Module A: `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_SECRET_KEY`, `FRONTEND_BASE_URL`, `COOKIE_SECURE`, `TERMS_VERSION`, `PRIVACY_VERSION`, `AVATAR_BUCKET`, `ATTACHMENT_BUCKET`). Twilio, AWS/Bedrock, service-role and rate-limit variables are added in the phase that first reads them, so the example never lists settings that do nothing.
 
 ```env
 # ─── Supabase ────────────────────────────────────────────────
@@ -132,21 +169,28 @@ SMS_PROVIDER_MODE=mock
 # Required only when SMS_PROVIDER_MODE=live:
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
-TWILIO_PHONE_NUMBER=
-TWILIO_WEBHOOK_SECRET=
+SMS_PUBLIC_BASE_URL=
 
 # ─── AI (Phase 3+) ───────────────────────────────────────────
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
+EMAIL_PROVIDER_MODE=mock
+# Required only when EMAIL_PROVIDER_MODE=smtp:
+EMAIL_FROM_ADDRESS=
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USERNAME=
+SMTP_PASSWORD=
+
+AI_PROVIDER_MODE=mock
+# Required only when AI_PROVIDER_MODE=bedrock:
+BEDROCK_REGION=
 BEDROCK_MODEL_ID=
+BEDROCK_API_KEY=
 
 # ─── Application ─────────────────────────────────────────────
 LOG_LEVEL=DEBUG
 CORS_ORIGINS=http://localhost:5173
 DB_POOL_SIZE=5
 RATE_LIMIT_LOGIN=5
-RATE_LIMIT_SMS_DAILY=500
 RATE_LIMIT_AI_HOURLY=50
 ```
 
@@ -195,8 +239,8 @@ This prevents the application from running in a silently broken state.
 | `SUPABASE_SERVICE_ROLE_KEY` | Team member departure; suspected exposure | Rotate in Supabase dashboard; update hosting env var |
 | `SUPABASE_JWT_SECRET` | Suspected compromise | Rotate in Supabase dashboard; update backend env var; all sessions invalidated |
 | `TWILIO_AUTH_TOKEN` | Annually; suspected exposure | Rotate in Twilio console; update hosting env var |
-| `TWILIO_WEBHOOK_SECRET` | Annually; provider allows rotation | Rotate in Twilio console; update hosting env var |
-| `AWS_ACCESS_KEY_ID` / `SECRET` | Quarterly; team member departure | Rotate in IAM; update hosting env var |
+| `TWILIO_AUTH_TOKEN` (also signs webhooks) | Annually, or at once if exposed | Rotate in the Twilio console; update the hosting env var; restart. Webhooks signed with the old token fail until then |
+| `BEDROCK_API_KEY` | Quarterly; team member departure | Rotate in IAM; update hosting env var |
 
 ---
 
@@ -205,3 +249,13 @@ This prevents the application from running in a silently broken state.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | November 2026 | Kiro (Principal Architect) | Initial draft |
+
+---
+
+## 10. Hosted Deployment Additions (November 2026)
+
+- Templates for real environments: `backend/production.env.example` and `frontend/production.env.example`. They are documentation; real values live in the hosting secret stores.
+- `python -m app.preflight` runs before the server in the container and blocks an unsafe hosted configuration (see [deployment-guide.md](deployment-guide.md)). It requires `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, https non-local `CORS_ORIGINS` and `FRONTEND_BASE_URL` (whose origin must be listed in `CORS_ORIGINS`), no `COOKIE_SECURE=false`, and no `LOG_LEVEL=DEBUG`.
+- Server variables read by uvicorn, not by the application settings: `PORT` (default 8000 in the image) and `FORWARDED_ALLOW_IPS` (proxy addresses trusted for `X-Forwarded-For`).
+- Frontend: a build with `VITE_APP_ENV` of `staging` or `production` fails unless `VITE_API_BASE_URL` is an https, non-local URL. No Supabase variable is needed by the frontend.
+- Request body limits are fixed in code (`app/core/body_limit.py`), not configurable: 1 MB default, 64 KB webhooks, 3 MB avatar, 11 MB attachments.
