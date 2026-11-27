@@ -19,7 +19,6 @@ export const MAIN_NAV_ITEMS: readonly NavItem[] = [
   { to: paths.messages, label: "Messages" },
   { to: paths.sms, label: "SMS" },
   { to: paths.contacts, label: "Contacts" },
-  { to: paths.settings, label: "Settings" },
   { to: paths.styleGuide, label: "Style guide" },
 ];
 
@@ -30,11 +29,12 @@ export interface MainNavProps {
   items?: readonly NavItem[];
   /** Classic mode: a menu-bar look. Touch targets stay 44px on small screens. */
   compact?: boolean;
+  className?: string;
 }
 
-export function MainNav({ items = MAIN_NAV_ITEMS, compact = false }: MainNavProps) {
+export function MainNav({ items = MAIN_NAV_ITEMS, compact = false, className }: MainNavProps) {
   return (
-    <nav aria-label="Main" className="flex flex-wrap gap-1">
+    <nav aria-label="Main" className={cn("flex gap-1", className)}>
       {items.map((item) => (
         <NavLink
           key={item.to}
@@ -42,7 +42,7 @@ export function MainNav({ items = MAIN_NAV_ITEMS, compact = false }: MainNavProp
           end={item.to === paths.home}
           className={({ isActive }) =>
             cn(
-              "inline-flex min-h-11 items-center rounded-control px-3 text-sm font-medium transition-colors hover:bg-surface-raised",
+              "inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-control px-3 text-sm font-medium transition-colors hover:bg-surface-raised",
               compact && "px-2 text-xs md:min-h-8",
               isActive ? "bg-surface-raised text-accent" : "text-fg",
             )

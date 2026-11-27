@@ -23,12 +23,15 @@ export function AppLayout({ navItems, headerActions }: AppLayoutProps) {
   return (
     <div className="flex min-h-screen flex-col">
       <header
-        className={cn("border-b border-border", classic ? "bg-surface-raised bevel" : "bg-surface")}
+        className={cn(
+          "border-b border-border",
+          classic ? "bg-surface-raised bevel" : "sticky top-0 z-30 bg-surface",
+        )}
       >
         <div
           className={cn(
-            "mx-auto flex flex-wrap items-center justify-between gap-2",
-            classic ? "max-w-4xl px-2 py-1" : wide ? "max-w-[90rem] p-2" : "max-w-5xl p-2",
+            "mx-auto flex flex-wrap items-center gap-x-4 gap-y-1",
+            classic ? "max-w-4xl px-2 py-1" : "max-w-5xl p-2",
           )}
         >
           {classic ? (
@@ -39,8 +42,18 @@ export function AppLayout({ navItems, headerActions }: AppLayoutProps) {
           ) : (
             <Logo size="md" />
           )}
-          <MainNav items={navItems} compact={classic} />
-          {headerActions ? <div className="flex items-center gap-2">{headerActions}</div> : null}
+          {/* Small screens: logo + actions on row one, navigation scrolls on row two.
+              Large screens: one row with the actions pushed to the right. */}
+          <MainNav
+            items={navItems}
+            compact={classic}
+            className="order-3 -mx-2 w-full min-w-0 overflow-x-auto px-2 lg:order-2 lg:mx-0 lg:w-auto lg:flex-1 lg:px-0"
+          />
+          {headerActions ? (
+            <div className="order-2 ml-auto flex items-center gap-2 lg:order-3">
+              {headerActions}
+            </div>
+          ) : null}
         </div>
       </header>
       <main

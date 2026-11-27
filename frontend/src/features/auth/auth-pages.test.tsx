@@ -282,7 +282,12 @@ describe("sign out", () => {
     const user = userEvent.setup();
     const { router, queryClient } = renderApp("/");
     await user.click(await screen.findByRole("button", { name: "Sign out" }));
-    await waitFor(() => expect(router.state.location.pathname).toBe("/auth/sign-in"));
+    // Signing out from the home address lands on the public landing page.
+    expect(
+      await screen.findByRole("heading", { level: 1, name: /refused to die/i }),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/");
+    await waitFor(() => expect(sessionStore.getSnapshot().status).toBe("signed-out"));
     expect(sessionStore.getSnapshot().status).toBe("signed-out");
     expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
   });

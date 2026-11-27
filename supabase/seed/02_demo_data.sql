@@ -10,11 +10,12 @@
 -- +1 555 01xx style range. All SMS use the simulation provider, so the dashboard shows
 -- SIMULATED traffic only and no live message exists.
 --
---   Sign in as demo01@chikka.test ... demo18@chikka.test, password: dev-password-only
+--   Sign in as demo01@chikka.test ... demo16@chikka.test, password: dev-password-only
 --   (only when pgcrypto is available, as in Supabase local and hosted).
---   demo17, demo18  awaiting email confirmation
+--   demo17, demo18  awaiting email confirmation, so they cannot sign in until confirmed
 --   demo19          suspended
 --   demo20          administrator (demo20@chikka.test)
+--   Usernames are demo_01 ... demo_20. Even-numbered accounts up to demo16 have the AI assistant on.
 --
 -- Not seeded on purpose: message_attachments (needs files in Storage), message_hides and
 -- rate_limit_counters (short-lived runtime state).

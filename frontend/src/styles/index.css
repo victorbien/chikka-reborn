@@ -196,6 +196,17 @@ body {
   border-left-color: var(--bubble-out);
 }
 
+/* Landing-page ghost drifts up and down. Used only under motion-safe. */
+@keyframes chikka-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.5rem);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

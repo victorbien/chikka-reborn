@@ -238,7 +238,7 @@ The 2 backend skips need Twilio test credentials. The 15 frontend skips need a l
 
 Everything on screen that involves SMS must show the SIMULATED label. State "simulation" out loud in the SMS segment. Do not use the words "real text" or "delivered to a phone" for simulated messages.
 
-**Before recording.** Use a stack with seeded fictional users. Have two browser windows: User A (the sender, with a verified simulated mobile number and the AI assistant switched on) and an administrator. Use only fictional numbers: any number ending in the range `+1202555xxxx` from `docs/deployment/local-development.md` section 7. Pre-verify the sender's number so the demo skips the code step. Confirm the SMS delivers in about 6 seconds before filming.
+**Before recording.** Use a stack with seeded fictional users. Have two browser windows: User A (the sender, with a verified simulated mobile number and the AI assistant switched on) and an administrator. Use only fictional numbers. After `supabase/seed/01_dev_seed.sql` the sender is `alice@chikka.test` (password `dev-password-only`, mobile number already verified in simulation, AI assistant on, consent already recorded for `+15550100101`). Her buddy-list contact is `bob@chikka.test`. The administrator is `admin@chikka.test`. In "Simulate a reply", use From `+15550100101` and To `+15550100900`. Send a new SMS to `+15550100101` first so the reply route is fresh. If you also load `02_demo_data.sql` the dashboard has realistic traffic (accounts `demo01` to `demo16`, admin `demo20`). Confirm the SMS delivers in about 6 seconds before filming. These seed numbers were checked against the seed files, but not driven through the UI.
 
 | Time | Screen | Narration |
 |---|---|---|

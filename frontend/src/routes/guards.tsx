@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Avatar } from "@/components/shared/Avatar";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { PageLoader } from "@/components/common/PageLoader";
@@ -19,6 +19,7 @@ import { useDisplayMode } from "@/lib/display-mode";
 import { RealtimeProvider } from "@/lib/realtime/provider";
 import { toUserFacingError } from "@/lib/error-handling";
 import { paths } from "@/lib/paths";
+import { LandingPage } from "@/routes/LandingPage";
 
 export interface RedirectState {
   from?: string;
@@ -44,6 +45,8 @@ export function RequireAuth() {
   const location = useLocation();
   if (session.status === "unknown") return <PageLoader label="Restoring your session" />;
   if (session.status === "signed-out") {
+    // Visitors to the home address get the public landing page, not a bare sign-in form.
+    if (location.pathname === paths.home) return <LandingPage />;
     const state: RedirectState = { from: location.pathname + location.search };
     return <Navigate to={paths.signIn} replace state={state} />;
   }
@@ -108,14 +111,18 @@ export function SignedInAppLayout() {
               <CreditBadge />
               <ModeToggle />
               <NotificationBell />
-              <span className="flex items-center gap-2 text-sm">
+              <Link
+                to={paths.settings}
+                aria-label={`${me.data.display_name}, profile and settings`}
+                className="flex min-h-11 items-center gap-2 rounded-control px-2 text-sm transition-colors hover:bg-surface-raised"
+              >
                 <Avatar
                   name={me.data.display_name}
                   imageUrl={me.data.avatar_url ?? undefined}
                   size="sm"
                 />
                 <span className="hidden sm:inline">{me.data.display_name}</span>
-              </span>
+              </Link>
               <SignOutButton onSignedOut={() => navigate(paths.signIn, { replace: true })} />
             </>
           ) : null
